@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { PDFDict, PDFDocument, PDFName } from "pdf-lib";
+import { decodePDFRawStream, PDFDict, PDFDocument, PDFName } from "pdf-lib";
 import { fillChecklistPdf } from "../pdf-export.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -21,6 +21,12 @@ function createData() {
     })),
     signature: [[{ x: 0.05, y: 0.75 }, { x: 0.25, y: 0.35 }, { x: 0.5, y: 0.65 }]],
   };
+}
+
+function getPageContent(page, pdf) {
+  return page.node.Contents().asArray()
+    .map((reference) => Buffer.from(decodePDFRawStream(pdf.context.lookup(reference)).decode()).toString("latin1"))
+    .join("\n");
 }
 
 test("fills the original two-page checklist with its 24 checks", async () => {
@@ -65,6 +71,18 @@ test("automatically applies Masengesho Pascal's saved signature", async () => {
   assert.equal(filled.getTitle(), "Maintenance Daily Checklist - 18/10/2026");
   const images = filled.getPage(1).node.Resources().lookup(PDFName.of("XObject"), PDFDict);
   assert.equal(images.keys().length, 1);
+  const content = getPageContent(filled.getPage(1), filled);
+  assert.match(content, /1 0 0 1 177 565\.5 Tm/);
+  assert.match(content, /481\.\d+ 553\.5 cm/);
+});
+
+test("places a hand-drawn signature beside its printed label", async () => {
+  const pdf = await fillChecklistPdf(template, createData());
+  const filled = await PDFDocument.load(pdf);
+  const content = getPageContent(filled.getPage(1), filled);
+  assert.match(content, /1 0 0 1 177 565\.5 Tm/);
+  assert.match(content, /462\.8 559\.5 m/);
+  assert.match(content, /482 569\.1 l/);
 });
 
 test("does not download Pascal's checklist if the saved signature image is missing", async () => {

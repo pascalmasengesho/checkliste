@@ -13,6 +13,8 @@ const ROWS = [
 ];
 
 const INK = rgb(33 / 255, 75 / 255, 57 / 255);
+const DUTY_NAME = { x: 177, y: 565.5, maxWidth: 98 };
+const SIGNATURE_BOX = { x: 458, y: 553.5, width: 96, height: 24 };
 function printableText(value) {
   return String(value ?? "")
     .normalize("NFKD")
@@ -134,21 +136,21 @@ export async function fillChecklistPdf(templateBytes, data) {
   }
 
   drawWrappedText(pageTwo, data.personnel, {
-    x: 165,
-    y: 581,
+    x: DUTY_NAME.x,
+    y: DUTY_NAME.y,
     font: regularFont,
     size: 9,
     color: INK,
-    maxWidth: 154,
+    maxWidth: DUTY_NAME.maxWidth,
     maxLines: 2,
     lineHeight: 12,
   });
   if (isPascal) {
     const signatureImage = await pdf.embedPng(data.signatureImage);
-    const dimensions = signatureImage.scaleToFit(103, 24);
+    const dimensions = signatureImage.scaleToFit(SIGNATURE_BOX.width, SIGNATURE_BOX.height);
     pageTwo.drawImage(signatureImage, {
-      x: 451 + (103 - dimensions.width) / 2,
-      y: 574 + (24 - dimensions.height) / 2,
+      x: SIGNATURE_BOX.x + (SIGNATURE_BOX.width - dimensions.width) / 2,
+      y: SIGNATURE_BOX.y + (SIGNATURE_BOX.height - dimensions.height) / 2,
       ...dimensions,
     });
   } else {
@@ -158,8 +160,14 @@ export async function fillChecklistPdf(templateBytes, data) {
         const from = points[index - 1];
         const to = points[index];
         pageTwo.drawLine({
-          start: { x: 451 + Math.min(1, Math.max(0, from.x)) * 103, y: 574 + (1 - Math.min(1, Math.max(0, from.y))) * 24 },
-          end: { x: 451 + Math.min(1, Math.max(0, to.x)) * 103, y: 574 + (1 - Math.min(1, Math.max(0, to.y))) * 24 },
+          start: {
+            x: SIGNATURE_BOX.x + Math.min(1, Math.max(0, from.x)) * SIGNATURE_BOX.width,
+            y: SIGNATURE_BOX.y + (1 - Math.min(1, Math.max(0, from.y))) * SIGNATURE_BOX.height,
+          },
+          end: {
+            x: SIGNATURE_BOX.x + Math.min(1, Math.max(0, to.x)) * SIGNATURE_BOX.width,
+            y: SIGNATURE_BOX.y + (1 - Math.min(1, Math.max(0, to.y))) * SIGNATURE_BOX.height,
+          },
           thickness: 1.3,
           color: INK,
         });
