@@ -137,8 +137,16 @@ function createChecklist() {
         choice.append(input, answerLabel);
         controls.append(choice);
       }
+      const commentToggle = document.createElement("button");
+      commentToggle.className = "row-comment-toggle";
+      commentToggle.type = "button";
+      commentToggle.textContent = "Add comment";
+      commentToggle.setAttribute("aria-controls", `comment-panel-${check.number}`);
+      commentToggle.setAttribute("aria-expanded", "false");
       const comment = document.createElement("div");
       comment.className = "row-comment";
+      comment.id = `comment-panel-${check.number}`;
+      comment.hidden = true;
       const commentInner = document.createElement("div");
       commentInner.className = "row-comment-inner";
       const commentLabel = document.createElement("label");
@@ -153,7 +161,7 @@ function createChecklist() {
       commentInput.autocomplete = "off";
       commentInner.append(commentLabel, commentInput);
       comment.append(commentInner);
-      row.append(copy, controls, comment);
+      row.append(copy, controls, commentToggle, comment);
       section.append(row);
     }
     fragment.append(section);
@@ -223,7 +231,7 @@ function applyPascalSignature() {
 function resetFormForDuty(name) {
   form.reset();
   for (const row of document.querySelectorAll(".check-row")) {
-    row.classList.remove("has-answer", "is-yes");
+    updateCommentDisclosure(row);
     const comment = row.querySelector(".row-comment input");
     comment.required = false;
     comment.removeAttribute("aria-invalid");
@@ -249,9 +257,17 @@ function setDutySignatureInstructions(name) {
     : "The person on duty must draw their own signature for this checklist.";
 }
 
-function setCommentState(row, answer) {
-  row.classList.toggle("has-answer", answer !== "");
-  row.classList.toggle("is-yes", answer === "Y");
+function updateCommentDisclosure(row, reveal = null) {
+  const commentInput = row.querySelector(".row-comment input");
+  const commentToggle = row.querySelector(".row-comment-toggle");
+  const hasComment = Boolean(commentInput.value.trim());
+  const expanded = reveal ?? hasComment;
+  row.querySelector(".row-comment").hidden = !expanded;
+  commentToggle.setAttribute("aria-expanded", String(expanded));
+  commentToggle.textContent = expanded ? "Hide comment" : hasComment ? "Edit comment" : "Add comment";
+}
+
+function setAnswerState(row) {
   const comment = row.querySelector(".row-comment input");
   comment.required = false;
   if (comment.value.trim()) comment.removeAttribute("aria-invalid");
@@ -299,7 +315,7 @@ function scheduleSave() {
 function handleAnswerChange(event) {
   if (event.target.matches('input[type="radio"]')) {
     const number = event.target.name.replace("answer-", "");
-    setCommentState(event.target.closest(".check-row"), event.target.value);
+    setAnswerState(event.target.closest(".check-row"));
     document.getElementById(`comment-${number}`).removeAttribute("aria-invalid");
     updateProgress();
     scheduleSave();
@@ -328,9 +344,11 @@ function loadSavedState(storageKey, name) {
     const saved = state.answers[number];
     if (!saved || typeof saved !== "object") continue;
     document.getElementById(`comment-${number}`).value = typeof saved.comment === "string" ? saved.comment : "";
+    const row = form.querySelector(`.check-row[data-check="${number}"]`);
+    updateCommentDisclosure(row);
     if (saved.answer === "Y" || saved.answer === "N") {
       form.querySelector(`input[name="answer-${number}"][value="${saved.answer}"]`).checked = true;
-      setCommentState(form.querySelector(`.check-row[data-check="${number}"]`), saved.answer);
+      setAnswerState(row);
     }
   }
 
@@ -516,7 +534,7 @@ function clearChecklist() {
   suppressSave = true;
   form.reset();
   for (const row of document.querySelectorAll(".check-row")) {
-    row.classList.remove("has-answer", "is-yes");
+    updateCommentDisclosure(row);
     const comment = row.querySelector(".row-comment input");
     comment.required = false;
     comment.removeAttribute("aria-invalid");
@@ -553,9 +571,19 @@ dutyDialog.showModal();
 window.requestAnimationFrame(() => dutyNameInput.focus());
 
 itemsRoot.addEventListener("change", handleAnswerChange);
+itemsRoot.addEventListener("click", (event) => {
+  const toggle = event.target.closest(".row-comment-toggle");
+  if (!toggle) return;
+  const row = toggle.closest(".check-row");
+  updateCommentDisclosure(row, toggle.getAttribute("aria-expanded") !== "true");
+  if (toggle.getAttribute("aria-expanded") === "true") {
+    row.querySelector(".row-comment input").focus();
+  }
+});
 itemsRoot.addEventListener("input", (event) => {
   if (event.target.matches(".row-comment input")) {
     if (event.target.value.trim()) event.target.removeAttribute("aria-invalid");
+    updateCommentDisclosure(event.target.closest(".check-row"), true);
     scheduleSave();
   }
 });

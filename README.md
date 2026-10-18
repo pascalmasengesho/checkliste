@@ -6,7 +6,7 @@ Fill in the original Kigali maintenance form and download a completed PDF. The c
 
 1. Double-click `START.bat`.
 2. Enter the name of the person on duty. The app asks for this each time it opens and keeps a separate local draft for each name.
-3. Answer all 24 checks. Add an optional comment to any check; comments are included in that check's section of the downloaded PDF.
+3. Answer all 24 checks. Click **Add comment** under any check to open its optional comment box; comments are included in that check's section of the downloaded PDF.
 4. Enter the date. Other personnel must draw their own signature; Masengesho Pascal's saved signature is applied automatically when his exact name is selected.
 5. Select **Download completed PDF**.
 
