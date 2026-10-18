@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f8fa">
+  <title>Maintenance Daily Checklist | Kigali</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./vendor/checklist-pdf.js"></script>
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="Kigali maintenance checklist home">
+      <span class="brand-mark" aria-hidden="true">K</span>
+      <span class="brand-name">KIGALI <span>·</span> FACILITIES</span>
+    </a>
+    <div class="privacy-note"><span class="privacy-dot"></span> Your checklist stays on this device</div>
+  </header>
+
+  <main class="page">
+    <section class="intro">
+      <p class="eyebrow">FACILITIES · DAILY OPERATIONS</p>
+      <h1>Maintenance checklist</h1>
+      <p class="subtitle">A clear record of today’s checks, completed tasks, and anything that needs attention.</p>
+    </section>
+
+    <form id="checklist-form" novalidate>
+      <section class="details-card" aria-labelledby="details-heading">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">SHIFT RECORD</p>
+            <h2 id="details-heading">First, the details</h2>
+          </div>
+          <div class="record-controls">
+            <span class="save-status" id="save-status" role="status" aria-live="polite">Saved on this device</span>
+            <button class="change-duty" type="button" id="change-duty">Change person</button>
+          </div>
+        </div>
+        <div class="details-grid">
+          <label class="field">
+            <span>Checklist date <span class="required">*</span></span>
+            <input id="checklist-date" name="date" type="date" required>
+          </label>
+          <label class="field">
+            <span>Personnel on duty <span class="required">*</span></span>
+            <input id="personnel" name="personnel" type="text" maxlength="90" aria-label="Person on duty" readonly required>
+          </label>
+        </div>
+      </section>
+
+      <section class="checklist-card" aria-labelledby="checks-heading">
+        <div class="section-heading checklist-heading">
+          <div>
+            <p class="eyebrow">25 DAILY CHECKS</p>
+            <h2 id="checks-heading">Work through each area</h2>
+          </div>
+          <span class="progress-copy" id="progress-copy">0 of 24 answered</span>
+        </div>
+        <div class="progress-track" role="progressbar" id="progress-bar" aria-label="Checklist completion" aria-valuemin="0" aria-valuemax="24" aria-valuenow="0">
+          <span id="progress-fill"></span>
+        </div>
+
+        <div id="checklist-items"></div>
+      </section>
+
+      <section class="finish-card" aria-labelledby="finish-heading">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">WRAP UP</p>
+            <h2 id="finish-heading">Leave a useful handover</h2>
+          </div>
+        </div>
+        <label class="field notes-field">
+          <span>Notes and follow-up</span>
+          <textarea id="notes" name="notes" rows="4" maxlength="300" placeholder="Anything the next shift should know? Record issues, actions taken, or follow-up needed."></textarea>
+        </label>
+        <div class="signature-block" id="signature-block">
+          <div class="signature-copy">
+            <span class="field-label">Signature</span>
+            <span class="helper" id="signature-helper">The person on duty must draw their own signature for this checklist.</span>
+          </div>
+          <div class="signature-wrap">
+            <canvas id="signature-pad" width="900" height="200" aria-label="Signature drawing area" aria-describedby="signature-helper" tabindex="0" role="img"></canvas>
+            <button class="clear-signature" type="button" id="clear-signature">Clear signature</button>
+          </div>
+        </div>
+        <label class="signature-attestation" id="signature-attestation-wrap" hidden>
+          <input type="checkbox" id="signature-attestation">
+          <span>I am Masengesho Pascal and I personally drew the signature above.</span>
+        </label>
+      </section>
+
+      <div class="form-footer">
+        <p class="footer-hint"><span class="required">*</span> Required. Answer all 25 checks, add the date, and have the person on duty sign to download.</p>
+        <div class="footer-actions">
+          <button class="button button-secondary" type="button" id="reset-button">Start a new checklist</button>
+          <button class="button button-primary" type="submit">
+            <svg aria-hidden="true" viewBox="0 0 20 20" fill="none"><path d="M10 2.75v9.5m0 0 3.5-3.5M10 12.25l-3.5-3.5M3.25 14v2.125c0 .345.28.625.625.625h12.25a.625.625 0 0 0 .625-.625V14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Download completed PDF
+          </button>
+        </div>
+      </div>
+      <p class="form-message" id="form-message" role="status" aria-live="polite"></p>
+    </form>
+    <footer class="page-footer">MAINTENANCE DAILY CHECKLIST <span>·</span> KIGALI</footer>
+  </main>
+
+  <dialog class="confirm-dialog" id="reset-dialog" aria-labelledby="reset-title">
+    <form method="dialog">
+      <p class="eyebrow">NEW SHIFT</p>
+      <h2 id="reset-title">Start a fresh checklist?</h2>
+      <p>This clears the current checklist, including saved answers and signature, from this device.</p>
+      <div class="dialog-actions">
+        <button class="button button-secondary" value="cancel">Keep this checklist</button>
+        <button class="button button-danger" id="confirm-reset" value="confirm">Clear and start fresh</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="confirm-dialog duty-dialog" id="duty-dialog" aria-labelledby="duty-title">
+    <form id="duty-form">
+      <p class="eyebrow">KIGALI · FACILITIES</p>
+      <h2 id="duty-title">Who is on duty?</h2>
+      <p>Enter the name of the person responsible for this maintenance checklist. A separate draft is saved for each person on this device.</p>
+      <label class="field" for="duty-name">
+        <span>Full name <span class="required">*</span></span>
+        <input id="duty-name" name="dutyName" type="text" maxlength="90" placeholder="Enter the on-duty person’s name" autocomplete="name" required>
+      </label>
+      <p class="duty-notice" id="duty-pascal-notice" hidden>Masengesho Pascal must personally draw and confirm his signature for each checklist. A signature image will not be added automatically.</p>
+      <div class="dialog-actions">
+        <button class="button button-primary" type="submit">Continue to checklist</button>
+      </div>
+    </form>
+  </dialog>
+</body>
+</html>

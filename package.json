@@ -1,0 +1,17 @@
+{
+  "name": "kigali-maintenance-checklist",
+  "version": "1.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:browser": "esbuild pdf-export.js --bundle --minify --format=iife --global-name=ChecklistPdf --outfile=vendor/checklist-pdf.js",
+    "build:site": "node scripts/build-site.mjs",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "pdf-lib": "1.17.1"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.12"
+  }
+}
