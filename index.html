@@ -3,8 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f7f8fa">
+  <meta name="theme-color" content="#197456">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Kigali Checklist">
   <title>Maintenance Daily Checklist | Kigali</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" href="./assets/icon-180.png">
   <link rel="stylesheet" href="./styles.css">
   <script src="./vendor/checklist-pdf.js"></script>
   <script src="./app.js" defer></script>
@@ -15,7 +20,10 @@
       <span class="brand-mark" aria-hidden="true">K</span>
       <span class="brand-name">KIGALI <span>·</span> FACILITIES</span>
     </a>
-    <div class="privacy-note"><span class="privacy-dot"></span> Your checklist stays on this device</div>
+    <div class="topbar-actions">
+      <div class="privacy-note"><span class="privacy-dot"></span> Your checklist stays on this device</div>
+      <button class="install-app" id="install-app" type="button">Install app</button>
+    </div>
   </header>
 
   <main class="page">
@@ -126,6 +134,18 @@
       <p class="duty-notice" id="duty-pascal-notice" hidden></p>
       <div class="dialog-actions">
         <button class="button button-primary" type="submit">Continue to checklist</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="confirm-dialog install-dialog" id="install-dialog" aria-labelledby="install-title">
+    <form method="dialog">
+      <p class="eyebrow">QUICK ACCESS</p>
+      <h2 id="install-title">Install the checklist</h2>
+      <p><strong>iPhone:</strong> Open this page in Safari, tap <strong>Share</strong>, then choose <strong>Add to Home Screen</strong>.</p>
+      <p><strong>Android:</strong> In Chrome, tap the menu, then choose <strong>Install app</strong> or <strong>Add to Home screen</strong>.</p>
+      <div class="dialog-actions">
+        <button class="button button-secondary" value="close">Close</button>
       </div>
     </form>
   </dialog>

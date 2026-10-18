@@ -82,6 +82,21 @@ button { -webkit-tap-highlight-color: transparent; }
   font-size: 12px;
 }
 
+.topbar-actions { display: flex; align-items: center; gap: 14px; }
+.install-app {
+  min-height: 34px;
+  padding: 0 11px;
+  border: 1px solid #cfe0d4;
+  border-radius: 7px;
+  background: #fff;
+  color: var(--green-dark);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 650;
+}
+.install-app:hover { border-color: #9cbea8; background: #fafcfb; }
+.install-app:focus-visible { outline: 2px solid #419474; outline-offset: 2px; }
+
 .privacy-dot {
   width: 7px;
   height: 7px;
@@ -399,7 +414,9 @@ h2 { margin-bottom: 0; font-size: 20px; line-height: 1.3; font-weight: 700; }
 
 @media (max-width: 520px) {
   .topbar { height: 58px; padding: 0 17px; }
-  .privacy-note { gap: 6px; font-size: 10px; }
+  .topbar-actions { gap: 8px; }
+  .privacy-note { gap: 6px; font-size: 9px; }
+  .install-app { min-height: 32px; padding: 0 8px; font-size: 10px; }
   .brand { gap: 8px; }
   .brand-mark { width: 27px; height: 27px; font-size: 14px; }
   .brand-name { font-size: 10px; }

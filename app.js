@@ -56,6 +56,10 @@ let activeStorageKey = null;
 let pascalSignatureImageBytes = null;
 let pascalSignatureBitmap = null;
 let pascalSignatureApplied = false;
+let installPromptEvent = null;
+
+const installButton = document.getElementById("install-app");
+const installDialog = document.getElementById("install-dialog");
 
 signatureContext.strokeStyle = "#285e49";
 signatureContext.lineWidth = 4.5;
@@ -647,5 +651,48 @@ window.addEventListener("storage", (event) => {
   if (event.key === STORAGE_KEY && event.newValue) {
     formMessage.textContent = "Another tab saved this checklist. Refresh this page to load the latest answers.";
     formMessage.classList.remove("success");
+  }
+});
+
+const isInstalled = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+if (isInstalled) installButton.hidden = true;
+
+window.addEventListener("beforeinstallprompt", (event) => {
+  event.preventDefault();
+  installPromptEvent = event;
+});
+
+installButton.addEventListener("click", async () => {
+  if (!installPromptEvent) {
+    installDialog.showModal();
+    return;
+  }
+
+  try {
+    installPromptEvent.prompt();
+    await installPromptEvent.userChoice;
+    installPromptEvent = null;
+  } catch (error) {
+    console.error("The checklist installation prompt could not be opened.", error);
+    installPromptEvent = null;
+    installDialog.showModal();
+  }
+});
+
+window.addEventListener("appinstalled", () => {
+  installButton.hidden = true;
+});
+
+window.addEventListener("load", async () => {
+  if (!("serviceWorker" in navigator)) {
+    formMessage.textContent = "Offline support is unavailable in this browser. You can still use the checklist online.";
+    return;
+  }
+
+  try {
+    await navigator.serviceWorker.register("./service-worker.js");
+  } catch (error) {
+    console.error("Could not register the checklist service worker.", error);
+    formMessage.textContent = "Offline support could not be enabled. You can still use the checklist online.";
   }
 });

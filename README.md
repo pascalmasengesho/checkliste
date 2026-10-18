@@ -28,3 +28,7 @@ The GitHub Actions workflow in `.github/workflows/pages.yml` builds the static s
 **Private access requirement:** a private GitHub repository alone does not make its Pages site private. GitHub restricts private Pages access to repositories owned by a GitHub Enterprise Cloud organization. The organization must enable private Pages, and the coworker must be an organization member with at least read access to the repository. The Pages visibility must be explicitly set to **Private** in the repository's Pages settings. Do not publish a public Pages site if checklist access must be restricted.
 
 The public app includes Masengesho Pascal's signature image and applies it automatically when the on-duty name is “Masengesho Pascal.” Anyone with access to the public app can download and reuse that signature. Other on-duty personnel must draw their own signature.
+
+## Install on a phone
+
+Open the GitHub Pages link over HTTPS. On Android, use Chrome's **Install app** button or choose **Install app**/**Add to Home screen** from the browser menu. On iPhone, open the link in Safari, tap **Share**, then choose **Add to Home Screen**. The installed app can load its checklist shell offline after the first successful visit; completed form data remains only in that browser on that device.
