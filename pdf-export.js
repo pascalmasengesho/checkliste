@@ -13,8 +13,6 @@ const ROWS = [
 ];
 
 const INK = rgb(33 / 255, 75 / 255, 57 / 255);
-const GRID = rgb(105 / 255, 117 / 255, 108 / 255);
-
 function printableText(value) {
   return String(value ?? "")
     .normalize("NFKD")
@@ -34,20 +32,21 @@ function wrappedLines(text, font, size, maxWidth, maxLines) {
       }
       if (line) lines.push(line);
       line = word;
-      if (lines.length >= maxLines) break;
+      if (lines.length >= maxLines + 1) break;
       while (font.widthOfTextAtSize(line, size) > maxWidth && line.length > 1) {
         let split = line.length - 1;
         while (split > 1 && font.widthOfTextAtSize(line.slice(0, split), size) > maxWidth) split -= 1;
         lines.push(line.slice(0, split));
         line = line.slice(split);
-        if (lines.length >= maxLines) break;
+        if (lines.length >= maxLines + 1) break;
       }
-      if (lines.length >= maxLines) break;
+      if (lines.length >= maxLines + 1) break;
     }
-    if (line && lines.length < maxLines) lines.push(line);
-    if (lines.length >= maxLines) break;
+    if (line && lines.length < maxLines + 1) lines.push(line);
+    if (lines.length >= maxLines + 1) break;
   }
-  if (lines.length === maxLines) {
+  if (lines.length > maxLines) {
+    lines.length = maxLines;
     lines[maxLines - 1] = `${lines[maxLines - 1].replace(/[ .]+$/, "")}...`;
   }
   return lines;
@@ -73,8 +72,8 @@ function isoToDisplayDate(value) {
 }
 
 export async function fillChecklistPdf(templateBytes, data) {
-  if (!data || !Array.isArray(data.answers) || data.answers.length !== 25) {
-    throw new Error("Please answer all 25 checks before downloading.");
+  if (!data || !Array.isArray(data.answers) || data.answers.length !== 24) {
+    throw new Error("Please answer all 24 checks before downloading.");
   }
   if (!data.personnel?.trim()) throw new Error("Enter the name of the person on duty.");
   for (let index = 0; index < data.answers.length; index += 1) {
@@ -82,19 +81,17 @@ export async function fillChecklistPdf(templateBytes, data) {
     if (!answer || !["Y", "N"].includes(answer.answer)) {
       throw new Error(`Choose Yes or No for check ${index + 1}.`);
     }
-    if (answer.answer === "N" && !answer.comment?.trim()) {
-      throw new Error(`Add a comment explaining check ${index + 1} and any follow-up needed.`);
-    }
   }
   const dateText = isoToDisplayDate(data.date);
+  const isPascal = data.personnel.trim().replace(/\s+/g, " ").toLocaleLowerCase() === "masengesho pascal";
   const signedStrokes = Array.isArray(data.signature)
     ? data.signature.filter((stroke) => Array.isArray(stroke) && stroke.length > 1)
     : [];
-  if (!signedStrokes.length) {
-    throw new Error("The person on duty must draw their signature before downloading.");
+  if (isPascal && (!(data.signatureImage instanceof Uint8Array) || !data.signatureImage.length)) {
+    throw new Error("Masengesho Pascal's saved signature could not be loaded.");
   }
-  if (data.isPascal && data.signatureConfirmed !== true) {
-    throw new Error("Masengesho Pascal must confirm he personally signed this checklist.");
+  if (!isPascal && !signedStrokes.length) {
+    throw new Error("The person on duty must draw their signature before downloading.");
   }
 
   const pdf = await PDFDocument.load(templateBytes);
@@ -125,13 +122,13 @@ export async function fillChecklistPdf(templateBytes, data) {
     if (answer.comment?.trim()) {
       drawWrappedText(page, answer.comment.trim(), {
         x: 355,
-        y: lower + (upper - lower + 7) / 2 - 2,
+        y: lower + (upper - lower) / 2 + 7,
         font: regularFont,
-        size: 7.2,
+        size: 6,
         color: INK,
         maxWidth: 195,
-        maxLines: 2,
-        lineHeight: 8,
+        maxLines: 3,
+        lineHeight: 7,
       });
     }
   }
@@ -146,17 +143,27 @@ export async function fillChecklistPdf(templateBytes, data) {
     maxLines: 2,
     lineHeight: 12,
   });
-  for (const stroke of signedStrokes) {
-    const points = stroke.slice(0, 250);
-    for (let index = 1; index < points.length; index += 1) {
-      const from = points[index - 1];
-      const to = points[index];
-      pageTwo.drawLine({
-        start: { x: 451 + Math.min(1, Math.max(0, from.x)) * 103, y: 574 + (1 - Math.min(1, Math.max(0, from.y))) * 24 },
-        end: { x: 451 + Math.min(1, Math.max(0, to.x)) * 103, y: 574 + (1 - Math.min(1, Math.max(0, to.y))) * 24 },
-        thickness: 1.3,
-        color: INK,
-      });
+  if (isPascal) {
+    const signatureImage = await pdf.embedPng(data.signatureImage);
+    const dimensions = signatureImage.scaleToFit(103, 24);
+    pageTwo.drawImage(signatureImage, {
+      x: 451 + (103 - dimensions.width) / 2,
+      y: 574 + (24 - dimensions.height) / 2,
+      ...dimensions,
+    });
+  } else {
+    for (const stroke of signedStrokes) {
+      const points = stroke.slice(0, 250);
+      for (let index = 1; index < points.length; index += 1) {
+        const from = points[index - 1];
+        const to = points[index];
+        pageTwo.drawLine({
+          start: { x: 451 + Math.min(1, Math.max(0, from.x)) * 103, y: 574 + (1 - Math.min(1, Math.max(0, from.y))) * 24 },
+          end: { x: 451 + Math.min(1, Math.max(0, to.x)) * 103, y: 574 + (1 - Math.min(1, Math.max(0, to.y))) * 24 },
+          thickness: 1.3,
+          color: INK,
+        });
+      }
     }
   }
 
@@ -170,54 +177,6 @@ export async function fillChecklistPdf(templateBytes, data) {
       maxWidth: 474,
       maxLines: 3,
       lineHeight: 12,
-    });
-  }
-
-  pageTwo.drawText("ADDITIONAL KITCHEN EQUIPMENT CHECK", {
-    x: 74,
-    y: 474,
-    font: boldFont,
-    size: 8,
-    color: INK,
-  });
-  pageTwo.drawRectangle({
-    x: 73.58,
-    y: 424,
-    width: 485.59,
-    height: 42,
-    borderColor: GRID,
-    borderWidth: 0.55,
-  });
-  pageTwo.drawLine({ start: { x: 280.48, y: 424 }, end: { x: 280.48, y: 466 }, color: GRID, thickness: 0.55 });
-  pageTwo.drawLine({ start: { x: 348.31, y: 424 }, end: { x: 348.31, y: 466 }, color: GRID, thickness: 0.55 });
-  drawWrappedText(pageTwo, "Check blenders, Robot Coupe food processors, and mixing machines for cleanliness and proper operation.", {
-    x: 78,
-    y: 450,
-    font: regularFont,
-    size: 8,
-    color: INK,
-    maxWidth: 193,
-    maxLines: 4,
-    lineHeight: 9,
-  });
-  const additionalAnswer = data.answers[24];
-  pageTwo.drawText(additionalAnswer.answer, {
-    x: 314 - boldFont.widthOfTextAtSize(additionalAnswer.answer, 9) / 2,
-    y: 440,
-    font: boldFont,
-    size: 9,
-    color: INK,
-  });
-  if (additionalAnswer.comment?.trim()) {
-    drawWrappedText(pageTwo, additionalAnswer.comment.trim(), {
-      x: 355,
-      y: 450,
-      font: regularFont,
-      size: 7.2,
-      color: INK,
-      maxWidth: 195,
-      maxLines: 4,
-      lineHeight: 8,
     });
   }
 

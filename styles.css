@@ -256,13 +256,12 @@ h2 { margin-bottom: 0; font-size: 20px; line-height: 1.3; font-weight: 700; }
   grid-column: 1 / -1;
   min-width: 0;
   display: grid;
-  grid-template-rows: 0fr;
-  opacity: 0;
-  transition: grid-template-rows .2s, opacity .18s, margin .18s;
+  grid-template-rows: 1fr;
+  margin-top: 1px;
+  opacity: 1;
 }
 
-.check-row.has-answer:not(.is-yes) .row-comment { grid-template-rows: 1fr; margin-top: 1px; opacity: 1; }
-.row-comment-inner { min-height: 0; overflow: hidden; }
+.row-comment-inner { min-height: 0; }
 .comment-label { display: block; margin-bottom: 6px; color: #717b73; font-size: 10px; font-weight: 650; }
 .comment-prompt { color: #929b94; font-weight: 400; }
 
@@ -295,9 +294,6 @@ h2 { margin-bottom: 0; font-size: 20px; line-height: 1.3; font-weight: 700; }
 .signature-copy { display: flex; flex-direction: column; gap: 6px; padding-top: 8px; }
 .helper { color: #8a948c; font-size: 10px; line-height: 1.55; }
 .signature-wrap { position: relative; }
-.signature-attestation { display: flex; align-items: flex-start; gap: 9px; margin: 14px 0 0 194px; color: #535f56; font-size: 11px; line-height: 1.5; cursor: pointer; }
-.signature-attestation[hidden] { display: none; }
-.signature-attestation input { width: 15px; height: 15px; flex: 0 0 auto; margin: 0; accent-color: var(--green); }
 
 #signature-pad {
   width: 100%;
@@ -404,7 +400,6 @@ h2 { margin-bottom: 0; font-size: 20px; line-height: 1.3; font-weight: 700; }
   .choice label { min-height: 29px; gap: 4px; font-size: 9px; }
   .signature-block { grid-template-columns: 1fr; gap: 9px; margin-top: 16px; }
   .signature-copy { gap: 4px; padding-top: 0; }
-  .signature-attestation { margin-left: 0; }
   .record-controls { gap: 6px; }
   .save-status { font-size: 9px; }
   .footer-actions { align-items: stretch; flex-direction: column-reverse; }

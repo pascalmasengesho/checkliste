@@ -26,7 +26,6 @@ const CHECKS = [
   { group: "Guest areas & service", label: "Inspect all tables and chairs throughout the restaurant for wobbling; rectify or report any defects." },
   { group: "Guest areas & service", label: "Confirm that all illuminated and operational signage is working correctly." },
   { group: "Guest areas & service", label: "Update the maintenance log with any tasks completed and issues encountered." },
-  { group: "Additional equipment", label: "Check blenders, Robot Coupe food processors, and mixing machines for cleanliness and proper operation." },
 ];
 
 const form = document.getElementById("checklist-form");
@@ -41,13 +40,12 @@ const signatureContext = signatureCanvas.getContext("2d");
 const dateInput = document.getElementById("checklist-date");
 const personnelInput = document.getElementById("personnel");
 const notesInput = document.getElementById("notes");
+const clearSignatureButton = document.getElementById("clear-signature");
 const resetDialog = document.getElementById("reset-dialog");
 const dutyDialog = document.getElementById("duty-dialog");
 const dutyForm = document.getElementById("duty-form");
 const dutyNameInput = document.getElementById("duty-name");
 const dutyNotice = document.getElementById("duty-pascal-notice");
-const dutyAttestation = document.getElementById("signature-attestation");
-const dutyAttestationWrap = document.getElementById("signature-attestation-wrap");
 const signatureHelper = document.getElementById("signature-helper");
 let saveTimer;
 let isDrawing = false;
@@ -55,6 +53,9 @@ let signatureStrokes = [];
 let activeStroke = null;
 let suppressSave = false;
 let activeStorageKey = null;
+let pascalSignatureImageBytes = null;
+let pascalSignatureBitmap = null;
+let pascalSignatureApplied = false;
 
 signatureContext.strokeStyle = "#285e49";
 signatureContext.lineWidth = 4.5;
@@ -143,12 +144,12 @@ function createChecklist() {
       const commentLabel = document.createElement("label");
       commentLabel.className = "comment-label";
       commentLabel.htmlFor = `comment-${check.number}`;
-      commentLabel.innerHTML = 'Comment <span class="comment-prompt">· Required when marked No</span>';
+      commentLabel.innerHTML = 'Comment <span class="comment-prompt">· Optional</span>';
       const commentInput = document.createElement("input");
       commentInput.id = `comment-${check.number}`;
       commentInput.type = "text";
       commentInput.maxLength = 120;
-      commentInput.placeholder = "Describe the issue, action taken, or follow-up needed";
+      commentInput.placeholder = "Add a note about this check (optional)";
       commentInput.autocomplete = "off";
       commentInner.append(commentLabel, commentInput);
       comment.append(commentInner);
@@ -177,8 +178,7 @@ function getCurrentState() {
     notes: notesInput.value,
     answers,
     signature: signatureStrokes,
-    signatureConfirmed: dutyAttestation.checked,
-    isPascal: isPascalName(personnelInput.value),
+    signatureImage: isPascalName(personnelInput.value) ? pascalSignatureImageBytes : null,
   };
 }
 
@@ -187,14 +187,37 @@ function isPascalName(name) {
 }
 
 function hasSignature() {
-  return signatureStrokes.some((stroke) => stroke.length > 1);
+  return isPascalName(personnelInput.value)
+    ? pascalSignatureApplied
+    : signatureStrokes.some((stroke) => stroke.length > 1);
 }
 
 function clearSignature() {
   signatureStrokes = [];
   activeStroke = null;
+  pascalSignatureApplied = false;
   signatureContext.clearRect(0, 0, signatureCanvas.width, signatureCanvas.height);
-  dutyAttestation.checked = false;
+}
+
+function applyPascalSignature() {
+  if (!pascalSignatureBitmap) {
+    throw new Error("Masengesho Pascal's saved signature is not available.");
+  }
+  const scale = Math.min(
+    signatureCanvas.width / pascalSignatureBitmap.width,
+    signatureCanvas.height / pascalSignatureBitmap.height,
+  );
+  const width = pascalSignatureBitmap.width * scale;
+  const height = pascalSignatureBitmap.height * scale;
+  signatureContext.clearRect(0, 0, signatureCanvas.width, signatureCanvas.height);
+  signatureContext.drawImage(
+    pascalSignatureBitmap,
+    (signatureCanvas.width - width) / 2,
+    (signatureCanvas.height - height) / 2,
+    width,
+    height,
+  );
+  pascalSignatureApplied = true;
 }
 
 function resetFormForDuty(name) {
@@ -215,9 +238,14 @@ function resetFormForDuty(name) {
 function setDutySignatureInstructions(name) {
   const isPascal = isPascalName(name);
   dutyNotice.hidden = !isPascal;
-  dutyAttestationWrap.hidden = !isPascal;
+  clearSignatureButton.hidden = isPascal;
+  signatureCanvas.style.pointerEvents = isPascal ? "none" : "";
+  signatureCanvas.setAttribute(
+    "aria-label",
+    isPascal ? "Masengesho Pascal's saved signature" : "Signature drawing area",
+  );
   signatureHelper.textContent = isPascal
-    ? "Masengesho Pascal must draw his signature in person for each checklist."
+    ? "Masengesho Pascal's saved signature is added automatically."
     : "The person on duty must draw their own signature for this checklist.";
 }
 
@@ -225,10 +253,8 @@ function setCommentState(row, answer) {
   row.classList.toggle("has-answer", answer !== "");
   row.classList.toggle("is-yes", answer === "Y");
   const comment = row.querySelector(".row-comment input");
-  if (answer === "Y") comment.value = "";
-  const showComment = answer === "N";
-  comment.required = showComment;
-  if (!showComment) comment.removeAttribute("aria-invalid");
+  comment.required = false;
+  if (comment.value.trim()) comment.removeAttribute("aria-invalid");
 }
 
 function updateProgress() {
@@ -240,7 +266,7 @@ function updateProgress() {
   const total = CHECKS.length + 2;
   const completed = answered
     + (dateInput.value.trim() && personnelInput.value.trim() ? 1 : 0)
-    + (hasSignature() && (!isPascalName(personnelInput.value) || dutyAttestation.checked) ? 1 : 0);
+    + (hasSignature() ? 1 : 0);
   const percent = Math.round(completed / total * 100);
   progressCopy.textContent = `${answered} of ${CHECKS.length} checks answered${completed === total ? " · Ready to download" : ""}`;
   progressBar.setAttribute("aria-valuemax", String(total));
@@ -256,8 +282,7 @@ function scheduleSave() {
   const saveKey = activeStorageKey;
   const state = getCurrentState();
   delete state.signature;
-  delete state.signatureConfirmed;
-  delete state.isPascal;
+  delete state.signatureImage;
   saveTimer = window.setTimeout(() => {
     try {
       window.localStorage.setItem(saveKey, JSON.stringify(state));
@@ -310,21 +335,54 @@ function loadSavedState(storageKey, name) {
   }
 
   clearSignature();
-  saveStatus.textContent = "Draft restored — please sign again";
+  saveStatus.textContent = isPascalName(name)
+    ? "Draft restored — signature added automatically"
+    : "Draft restored — please sign again";
   updateProgress();
 }
 
-function beginDutyShift(name) {
+async function beginDutyShift(name) {
   const normalizedName = name.trim().replace(/\s+/g, " ");
-  activeStorageKey = `${STORAGE_KEY}:${encodeURIComponent(normalizedName.toLocaleLowerCase())}`;
   setDutySignatureInstructions(normalizedName);
   try {
+    if (isPascalName(normalizedName)) {
+      const response = await fetch(new URL("./assets/masengesho-pascal-signature.png", window.location.href));
+      if (!response.ok) {
+        throw new Error(`Pascal's signature image could not be loaded (HTTP ${response.status}).`);
+      }
+      pascalSignatureImageBytes = new Uint8Array(await response.arrayBuffer());
+      if (!pascalSignatureImageBytes.length) {
+        throw new Error("Pascal's signature image is empty.");
+      }
+      pascalSignatureBitmap?.close();
+      pascalSignatureBitmap = await createImageBitmap(
+        new Blob([pascalSignatureImageBytes], { type: "image/png" }),
+      );
+    } else {
+      pascalSignatureImageBytes = null;
+      pascalSignatureBitmap?.close();
+      pascalSignatureBitmap = null;
+    }
+    activeStorageKey = `${STORAGE_KEY}:${encodeURIComponent(normalizedName.toLocaleLowerCase())}`;
     loadSavedState(activeStorageKey, normalizedName);
+    if (isPascalName(normalizedName)) applyPascalSignature();
   } catch (error) {
     console.error("Unable to load the saved maintenance checklist.", error);
-    formMessage.textContent = error instanceof Error
-      ? `${error.message} Your saved draft has not been overwritten.`
-      : "Could not read the saved checklist.";
+    activeStorageKey = null;
+    pascalSignatureImageBytes = null;
+    pascalSignatureBitmap?.close();
+    pascalSignatureBitmap = null;
+    if (isPascalName(normalizedName)) {
+      dutyNotice.textContent = error instanceof Error
+        ? `${error.message} Please try again.`
+        : "Could not load Pascal's signature image. Please try again.";
+      dutyNotice.hidden = false;
+    } else {
+      formMessage.textContent = error instanceof Error
+        ? `${error.message} Your saved draft has not been overwritten.`
+        : "Could not read the saved checklist.";
+    }
+    return;
   }
   dutyDialog.close();
   updateProgress();
@@ -369,15 +427,10 @@ function stopDrawing(event) {
 
 async function downloadPdf() {
   const missingAnswers = [];
-  let missingComment = null;
   for (const [index] of CHECKS.entries()) {
     const number = index + 1;
     const answer = form.querySelector(`input[name="answer-${number}"]:checked`)?.value;
     if (!answer) missingAnswers.push(number);
-    const comment = document.getElementById(`comment-${number}`);
-    if (answer === "N" && !comment.value.trim() && missingComment === null) {
-      missingComment = comment;
-    }
   }
   let firstInvalid = null;
   if (!dateInput.value.trim()) {
@@ -399,37 +452,17 @@ async function downloadPdf() {
     firstMissing.setCustomValidity("");
     firstInvalid ||= firstMissing;
   }
-  if (missingComment) {
-    missingComment.setAttribute("aria-invalid", "true");
-    missingComment.setCustomValidity("Add a comment to describe this issue and any follow-up needed.");
-    missingComment.reportValidity();
-    missingComment.setCustomValidity("");
-    firstInvalid ||= missingComment;
-  } else {
-    for (const row of document.querySelectorAll(".check-row")) {
-      const comment = row.querySelector(".row-comment input");
-      if (comment.value.trim()) comment.removeAttribute("aria-invalid");
-    }
-  }
   const missingSignature = !hasSignature();
-  const missingPascalConfirmation = isPascalName(personnelInput.value) && !dutyAttestation.checked;
-  if (firstInvalid || missingSignature || missingPascalConfirmation) {
-    formMessage.textContent = missingComment
-      ? "Please add a short comment to the check marked No."
-      : missingAnswers.length
-        ? `Please answer all ${CHECKS.length} checks before downloading.`
-        : !dateInput.value.trim() || !personnelInput.value.trim()
-          ? "Please add the checklist date and the name of the person on duty."
-          : missingPascalConfirmation
-            ? "Masengesho Pascal must confirm that he personally signed the checklist."
-            : "The person on duty must draw their signature before downloading.";
+  if (firstInvalid || missingSignature) {
+    formMessage.textContent = missingAnswers.length
+      ? `Please answer all ${CHECKS.length} checks before downloading.`
+      : !dateInput.value.trim() || !personnelInput.value.trim()
+        ? "Please add the checklist date and the name of the person on duty."
+        : "The person on duty must sign before downloading.";
     formMessage.classList.remove("success");
     if (firstInvalid) {
       firstInvalid.focus();
       firstInvalid.scrollIntoView({ behavior: "smooth", block: "center" });
-    } else if (missingPascalConfirmation) {
-      dutyAttestation.focus();
-      dutyAttestationWrap.scrollIntoView({ behavior: "smooth", block: "center" });
     } else {
       signatureCanvas.focus();
       signatureCanvas.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -499,6 +532,14 @@ function clearChecklist() {
     console.error("Unable to clear the saved maintenance checklist.", error);
     formMessage.textContent = "The checklist was cleared, but its saved copy could not be removed from this device.";
   }
+  if (isPascalName(personnelInput.value)) {
+    try {
+      applyPascalSignature();
+    } catch (error) {
+      console.error("Unable to apply Masengesho Pascal's saved signature.", error);
+      formMessage.textContent = error instanceof Error ? error.message : "Could not apply Pascal's saved signature.";
+    }
+  }
   saveStatus.textContent = "New checklist";
   saveStatus.classList.remove("saving");
   formMessage.classList.remove("success");
@@ -519,7 +560,7 @@ itemsRoot.addEventListener("input", (event) => {
   }
 });
 form.addEventListener("input", (event) => {
-  if (event.target === dateInput || event.target === personnelInput || event.target === dutyAttestation) updateProgress();
+  if (event.target === dateInput || event.target === personnelInput) updateProgress();
   scheduleSave();
 });
 form.addEventListener("submit", (event) => {
@@ -531,7 +572,7 @@ signatureCanvas.addEventListener("pointermove", drawSignature);
 signatureCanvas.addEventListener("pointerup", stopDrawing);
 signatureCanvas.addEventListener("pointercancel", stopDrawing);
 signatureCanvas.addEventListener("lostpointercapture", stopDrawing);
-document.getElementById("clear-signature").addEventListener("click", () => {
+clearSignatureButton.addEventListener("click", () => {
   clearSignature();
   updateProgress();
   scheduleSave();
@@ -556,10 +597,16 @@ document.getElementById("change-duty").addEventListener("click", () => {
   if (activeStorageKey) scheduleSave();
   dutyNameInput.value = personnelInput.value;
   dutyNotice.hidden = !isPascalName(dutyNameInput.value);
+  dutyNotice.textContent = isPascalName(dutyNameInput.value)
+    ? "The saved signature is added automatically. Anyone using this public site can access it."
+    : "";
   dutyDialog.showModal();
 });
 document.getElementById("duty-name").addEventListener("input", () => {
   dutyNotice.hidden = !isPascalName(dutyNameInput.value);
+  dutyNotice.textContent = isPascalName(dutyNameInput.value)
+    ? "The saved signature is added automatically. Anyone using this public site can access it."
+    : "";
 });
 document.getElementById("reset-button").addEventListener("click", () => resetDialog.showModal());
 document.getElementById("confirm-reset").addEventListener("click", (event) => {

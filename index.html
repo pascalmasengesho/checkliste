@@ -52,7 +52,7 @@
       <section class="checklist-card" aria-labelledby="checks-heading">
         <div class="section-heading checklist-heading">
           <div>
-            <p class="eyebrow">25 DAILY CHECKS</p>
+            <p class="eyebrow">24 DAILY CHECKS</p>
             <h2 id="checks-heading">Work through each area</h2>
           </div>
           <span class="progress-copy" id="progress-copy">0 of 24 answered</span>
@@ -85,14 +85,10 @@
             <button class="clear-signature" type="button" id="clear-signature">Clear signature</button>
           </div>
         </div>
-        <label class="signature-attestation" id="signature-attestation-wrap" hidden>
-          <input type="checkbox" id="signature-attestation">
-          <span>I am Masengesho Pascal and I personally drew the signature above.</span>
-        </label>
       </section>
 
       <div class="form-footer">
-        <p class="footer-hint"><span class="required">*</span> Required. Answer all 25 checks, add the date, and have the person on duty sign to download.</p>
+        <p class="footer-hint"><span class="required">*</span> Required. Answer all 24 checks and add the date. Comments are optional. Other personnel must draw their signature; Masengesho Pascal’s saved signature is applied automatically.</p>
         <div class="footer-actions">
           <button class="button button-secondary" type="button" id="reset-button">Start a new checklist</button>
           <button class="button button-primary" type="submit">
@@ -127,7 +123,7 @@
         <span>Full name <span class="required">*</span></span>
         <input id="duty-name" name="dutyName" type="text" maxlength="90" placeholder="Enter the on-duty person’s name" autocomplete="name" required>
       </label>
-      <p class="duty-notice" id="duty-pascal-notice" hidden>Masengesho Pascal must personally draw and confirm his signature for each checklist. A signature image will not be added automatically.</p>
+      <p class="duty-notice" id="duty-pascal-notice" hidden></p>
       <div class="dialog-actions">
         <button class="button button-primary" type="submit">Continue to checklist</button>
       </div>
