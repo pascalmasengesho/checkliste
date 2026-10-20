@@ -108,6 +108,25 @@ button { -webkit-tap-highlight-color: transparent; }
 .page { width: min(100% - 40px, 800px); margin: 0 auto; }
 
 .intro { padding: 52px 0 27px; }
+.report-link {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 5px;
+  padding: 0 12px;
+  border: 1px solid #cfe0d4;
+  border-radius: 8px;
+  background: #fff;
+  color: var(--green-dark);
+  font-size: 12px;
+  font-weight: 650;
+  text-decoration: none;
+  transition: background .15s, border-color .15s;
+}
+.report-link svg { width: 16px; height: 16px; }
+.report-link:hover { border-color: #9cbea8; background: #fafcfb; }
+.report-link:focus-visible { outline: 3px solid rgb(25 116 86 / 25%); outline-offset: 2px; }
 
 .eyebrow {
   margin: 0 0 10px;

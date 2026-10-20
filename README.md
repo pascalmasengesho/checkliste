@@ -2,6 +2,8 @@
 
 Fill in the original Kigali maintenance form and download a completed PDF. The checklist has the original 24 checks.
 
+Use **Open report generator** near the top of the app to open the separate report page in a new tab. This is an app-only link and does not appear in the downloaded checklist PDF.
+
 ## Use the local app
 
 1. Double-click `START.bat`.
