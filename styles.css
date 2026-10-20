@@ -436,6 +436,8 @@ h2 { margin-bottom: 0; font-size: 20px; line-height: 1.3; font-weight: 700; }
   .topbar-actions { gap: 8px; }
   .privacy-note { gap: 6px; font-size: 9px; }
   .install-app { min-height: 32px; padding: 0 8px; font-size: 10px; }
+  .report-link { min-height: 36px; gap: 6px; margin-top: 8px; padding: 0 10px; font-size: 11px; }
+  .report-link svg { width: 14px; height: 14px; }
   .brand { gap: 8px; }
   .brand-mark { width: 27px; height: 27px; font-size: 14px; }
   .brand-name { font-size: 10px; }
