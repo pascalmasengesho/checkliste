@@ -9,6 +9,7 @@ import { fillChecklistPdf } from "../pdf-export.js";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const template = await readFile(path.join(root, "template.pdf"));
 const pascalSignature = await readFile(path.join(root, "assets", "masengesho-pascal-signature.png"));
+const fabriceSignature = await readFile(path.join(root, "assets", "mwumvaneza-fabrice-signature.png"));
 
 function createData() {
   return {
@@ -76,6 +77,18 @@ test("automatically applies Masengesho Pascal's saved signature", async () => {
   assert.match(content, /481\.\d+ 553\.5 cm/);
 });
 
+test("automatically applies Mwumvaneza Fabrice's saved signature", async () => {
+  const data = createData();
+  data.personnel = "  MWUMVANEZA   FABRICE ";
+  data.signature = [];
+  data.signatureImage = fabriceSignature;
+  const pdf = await fillChecklistPdf(template, data);
+  const filled = await PDFDocument.load(pdf);
+  const images = filled.getPage(1).node.Resources().lookup(PDFName.of("XObject"), PDFDict);
+  assert.equal(images.keys().length, 1);
+  assert.match(getPageContent(filled.getPage(1), filled), /489\.8\d+ 553\.5 cm/);
+});
+
 test("places a hand-drawn signature beside its printed label", async () => {
   const pdf = await fillChecklistPdf(template, createData());
   const filled = await PDFDocument.load(pdf);
@@ -89,7 +102,7 @@ test("does not download Pascal's checklist if the saved signature image is missi
   const data = createData();
   data.personnel = "Masengesho Pascal";
   data.signature = [];
-  await assert.rejects(fillChecklistPdf(template, data), /saved signature could not be loaded/);
+  await assert.rejects(fillChecklistPdf(template, data), /saved signature for the person on duty could not be loaded/);
 });
 
 test("rejects any missing checklist response before generating a PDF", async () => {

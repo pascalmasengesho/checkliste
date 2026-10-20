@@ -1,6 +1,10 @@
 "use strict";
 
 const STORAGE_KEY = "kigali-maintenance-checklist-v2";
+const AUTO_SIGNATURES = [
+  { name: "masengesho pascal", label: "Masengesho Pascal", file: "masengesho-pascal-signature.png" },
+  { name: "mwumvaneza fabrice", label: "Mwumvaneza Fabrice", file: "mwumvaneza-fabrice-signature.png" },
+];
 const CHECKS = [
   { group: "Kitchen & equipment", label: "Inspect and test kitchen equipment (ovens, stoves, fryers, grills) for proper functioning." },
   { group: "Kitchen & equipment", label: "Check refrigerators, freezers, and walk-ins for correct temperature and cooling." },
@@ -45,7 +49,7 @@ const resetDialog = document.getElementById("reset-dialog");
 const dutyDialog = document.getElementById("duty-dialog");
 const dutyForm = document.getElementById("duty-form");
 const dutyNameInput = document.getElementById("duty-name");
-const dutyNotice = document.getElementById("duty-pascal-notice");
+const dutyNotice = document.getElementById("duty-signature-notice");
 const signatureHelper = document.getElementById("signature-helper");
 let saveTimer;
 let isDrawing = false;
@@ -53,9 +57,9 @@ let signatureStrokes = [];
 let activeStroke = null;
 let suppressSave = false;
 let activeStorageKey = null;
-let pascalSignatureImageBytes = null;
-let pascalSignatureBitmap = null;
-let pascalSignatureApplied = false;
+let dutySignatureImageBytes = null;
+let dutySignatureBitmap = null;
+let automaticSignatureApplied = false;
 let installPromptEvent = null;
 
 const installButton = document.getElementById("install-app");
@@ -190,46 +194,47 @@ function getCurrentState() {
     notes: notesInput.value,
     answers,
     signature: signatureStrokes,
-    signatureImage: isPascalName(personnelInput.value) ? pascalSignatureImageBytes : null,
+    signatureImage: automaticSignatureFor(personnelInput.value) ? dutySignatureImageBytes : null,
   };
 }
 
-function isPascalName(name) {
-  return name.trim().replace(/\s+/g, " ").toLocaleLowerCase() === "masengesho pascal";
+function automaticSignatureFor(name) {
+  const normalizedName = name.trim().replace(/\s+/g, " ").toLocaleLowerCase();
+  return AUTO_SIGNATURES.find((signature) => signature.name === normalizedName) ?? null;
 }
 
 function hasSignature() {
-  return isPascalName(personnelInput.value)
-    ? pascalSignatureApplied
+  return automaticSignatureFor(personnelInput.value)
+    ? automaticSignatureApplied
     : signatureStrokes.some((stroke) => stroke.length > 1);
 }
 
 function clearSignature() {
   signatureStrokes = [];
   activeStroke = null;
-  pascalSignatureApplied = false;
+  automaticSignatureApplied = false;
   signatureContext.clearRect(0, 0, signatureCanvas.width, signatureCanvas.height);
 }
 
-function applyPascalSignature() {
-  if (!pascalSignatureBitmap) {
-    throw new Error("Masengesho Pascal's saved signature is not available.");
+function applyAutomaticSignature() {
+  if (!dutySignatureBitmap) {
+    throw new Error("The saved signature for this person on duty is not available.");
   }
   const scale = Math.min(
-    signatureCanvas.width / pascalSignatureBitmap.width,
-    signatureCanvas.height / pascalSignatureBitmap.height,
+    signatureCanvas.width / dutySignatureBitmap.width,
+    signatureCanvas.height / dutySignatureBitmap.height,
   );
-  const width = pascalSignatureBitmap.width * scale;
-  const height = pascalSignatureBitmap.height * scale;
+  const width = dutySignatureBitmap.width * scale;
+  const height = dutySignatureBitmap.height * scale;
   signatureContext.clearRect(0, 0, signatureCanvas.width, signatureCanvas.height);
   signatureContext.drawImage(
-    pascalSignatureBitmap,
+    dutySignatureBitmap,
     (signatureCanvas.width - width) / 2,
     (signatureCanvas.height - height) / 2,
     width,
     height,
   );
-  pascalSignatureApplied = true;
+  automaticSignatureApplied = true;
 }
 
 function resetFormForDuty(name) {
@@ -248,16 +253,16 @@ function resetFormForDuty(name) {
 }
 
 function setDutySignatureInstructions(name) {
-  const isPascal = isPascalName(name);
-  dutyNotice.hidden = !isPascal;
-  clearSignatureButton.hidden = isPascal;
-  signatureCanvas.style.pointerEvents = isPascal ? "none" : "";
+  const automaticSignature = automaticSignatureFor(name);
+  dutyNotice.hidden = !automaticSignature;
+  clearSignatureButton.hidden = Boolean(automaticSignature);
+  signatureCanvas.style.pointerEvents = automaticSignature ? "none" : "";
   signatureCanvas.setAttribute(
     "aria-label",
-    isPascal ? "Masengesho Pascal's saved signature" : "Signature drawing area",
+    automaticSignature ? `${automaticSignature.label}'s saved signature` : "Signature drawing area",
   );
-  signatureHelper.textContent = isPascal
-    ? "Masengesho Pascal's saved signature is added automatically."
+  signatureHelper.textContent = automaticSignature
+    ? `${automaticSignature.label}'s saved signature is added automatically.`
     : "The person on duty must draw their own signature for this checklist.";
 }
 
@@ -357,7 +362,7 @@ function loadSavedState(storageKey, name) {
   }
 
   clearSignature();
-  saveStatus.textContent = isPascalName(name)
+  saveStatus.textContent = automaticSignatureFor(name)
     ? "Draft restored — signature added automatically"
     : "Draft restored — please sign again";
   updateProgress();
@@ -365,39 +370,40 @@ function loadSavedState(storageKey, name) {
 
 async function beginDutyShift(name) {
   const normalizedName = name.trim().replace(/\s+/g, " ");
+  const automaticSignature = automaticSignatureFor(normalizedName);
   setDutySignatureInstructions(normalizedName);
   try {
-    if (isPascalName(normalizedName)) {
-      const response = await fetch(new URL("./assets/masengesho-pascal-signature.png", window.location.href));
+    if (automaticSignature) {
+      const response = await fetch(new URL(`./assets/${automaticSignature.file}`, window.location.href));
       if (!response.ok) {
-        throw new Error(`Pascal's signature image could not be loaded (HTTP ${response.status}).`);
+        throw new Error(`${automaticSignature.label}'s signature image could not be loaded (HTTP ${response.status}).`);
       }
-      pascalSignatureImageBytes = new Uint8Array(await response.arrayBuffer());
-      if (!pascalSignatureImageBytes.length) {
-        throw new Error("Pascal's signature image is empty.");
+      dutySignatureImageBytes = new Uint8Array(await response.arrayBuffer());
+      if (!dutySignatureImageBytes.length) {
+        throw new Error(`${automaticSignature.label}'s signature image is empty.`);
       }
-      pascalSignatureBitmap?.close();
-      pascalSignatureBitmap = await createImageBitmap(
-        new Blob([pascalSignatureImageBytes], { type: "image/png" }),
+      dutySignatureBitmap?.close();
+      dutySignatureBitmap = await createImageBitmap(
+        new Blob([dutySignatureImageBytes], { type: "image/png" }),
       );
     } else {
-      pascalSignatureImageBytes = null;
-      pascalSignatureBitmap?.close();
-      pascalSignatureBitmap = null;
+      dutySignatureImageBytes = null;
+      dutySignatureBitmap?.close();
+      dutySignatureBitmap = null;
     }
     activeStorageKey = `${STORAGE_KEY}:${encodeURIComponent(normalizedName.toLocaleLowerCase())}`;
     loadSavedState(activeStorageKey, normalizedName);
-    if (isPascalName(normalizedName)) applyPascalSignature();
+    if (automaticSignature) applyAutomaticSignature();
   } catch (error) {
     console.error("Unable to load the saved maintenance checklist.", error);
     activeStorageKey = null;
-    pascalSignatureImageBytes = null;
-    pascalSignatureBitmap?.close();
-    pascalSignatureBitmap = null;
-    if (isPascalName(normalizedName)) {
+    dutySignatureImageBytes = null;
+    dutySignatureBitmap?.close();
+    dutySignatureBitmap = null;
+    if (automaticSignature) {
       dutyNotice.textContent = error instanceof Error
         ? `${error.message} Please try again.`
-        : "Could not load Pascal's signature image. Please try again.";
+        : `Could not load ${automaticSignature.label}'s signature image. Please try again.`;
       dutyNotice.hidden = false;
     } else {
       formMessage.textContent = error instanceof Error
@@ -554,12 +560,12 @@ function clearChecklist() {
     console.error("Unable to clear the saved maintenance checklist.", error);
     formMessage.textContent = "The checklist was cleared, but its saved copy could not be removed from this device.";
   }
-  if (isPascalName(personnelInput.value)) {
+  if (automaticSignatureFor(personnelInput.value)) {
     try {
-      applyPascalSignature();
+      applyAutomaticSignature();
     } catch (error) {
-      console.error("Unable to apply Masengesho Pascal's saved signature.", error);
-      formMessage.textContent = error instanceof Error ? error.message : "Could not apply Pascal's saved signature.";
+      console.error("Unable to apply the saved signature for the person on duty.", error);
+      formMessage.textContent = error instanceof Error ? error.message : "Could not apply the saved signature.";
     }
   }
   saveStatus.textContent = "New checklist";
@@ -628,16 +634,18 @@ document.getElementById("change-duty").addEventListener("click", () => {
   window.clearTimeout(saveTimer);
   if (activeStorageKey) scheduleSave();
   dutyNameInput.value = personnelInput.value;
-  dutyNotice.hidden = !isPascalName(dutyNameInput.value);
-  dutyNotice.textContent = isPascalName(dutyNameInput.value)
-    ? "The saved signature is added automatically. Anyone using this public site can access it."
+  const automaticSignature = automaticSignatureFor(dutyNameInput.value);
+  dutyNotice.hidden = !automaticSignature;
+  dutyNotice.textContent = automaticSignature
+    ? `The saved signature for ${automaticSignature.label} is added automatically. Anyone using this public site can access it.`
     : "";
   dutyDialog.showModal();
 });
 document.getElementById("duty-name").addEventListener("input", () => {
-  dutyNotice.hidden = !isPascalName(dutyNameInput.value);
-  dutyNotice.textContent = isPascalName(dutyNameInput.value)
-    ? "The saved signature is added automatically. Anyone using this public site can access it."
+  const automaticSignature = automaticSignatureFor(dutyNameInput.value);
+  dutyNotice.hidden = !automaticSignature;
+  dutyNotice.textContent = automaticSignature
+    ? `The saved signature for ${automaticSignature.label} is added automatically. Anyone using this public site can access it.`
     : "";
 });
 document.getElementById("reset-button").addEventListener("click", () => resetDialog.showModal());

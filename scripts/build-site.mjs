@@ -17,6 +17,10 @@ await cp(
   path.join(root, "assets", "masengesho-pascal-signature.png"),
   path.join(output, "assets", "masengesho-pascal-signature.png"),
 );
+await cp(
+  path.join(root, "assets", "mwumvaneza-fabrice-signature.png"),
+  path.join(output, "assets", "mwumvaneza-fabrice-signature.png"),
+);
 for (const file of ["icon-180.png", "icon-192.png", "icon-512.png"]) {
   await cp(path.join(root, "assets", file), path.join(output, "assets", file));
 }
@@ -39,6 +43,7 @@ const buildFiles = [
   "template.pdf",
   "vendor/checklist-pdf.js",
   "assets/masengesho-pascal-signature.png",
+  "assets/mwumvaneza-fabrice-signature.png",
 ];
 const buildId = createHash("sha256")
   .update(Buffer.concat(await Promise.all(buildFiles.map((file) => readFile(path.join(output, file))))))

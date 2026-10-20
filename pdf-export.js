@@ -15,6 +15,7 @@ const ROWS = [
 const INK = rgb(33 / 255, 75 / 255, 57 / 255);
 const DUTY_NAME = { x: 177, y: 565.5, maxWidth: 98 };
 const SIGNATURE_BOX = { x: 458, y: 553.5, width: 96, height: 24 };
+const AUTOMATIC_SIGNATURE_NAMES = new Set(["masengesho pascal", "mwumvaneza fabrice"]);
 function printableText(value) {
   return String(value ?? "")
     .normalize("NFKD")
@@ -85,14 +86,15 @@ export async function fillChecklistPdf(templateBytes, data) {
     }
   }
   const dateText = isoToDisplayDate(data.date);
-  const isPascal = data.personnel.trim().replace(/\s+/g, " ").toLocaleLowerCase() === "masengesho pascal";
+  const normalizedName = data.personnel.trim().replace(/\s+/g, " ").toLocaleLowerCase();
+  const hasAutomaticSignature = AUTOMATIC_SIGNATURE_NAMES.has(normalizedName);
   const signedStrokes = Array.isArray(data.signature)
     ? data.signature.filter((stroke) => Array.isArray(stroke) && stroke.length > 1)
     : [];
-  if (isPascal && (!(data.signatureImage instanceof Uint8Array) || !data.signatureImage.length)) {
-    throw new Error("Masengesho Pascal's saved signature could not be loaded.");
+  if (hasAutomaticSignature && (!(data.signatureImage instanceof Uint8Array) || !data.signatureImage.length)) {
+    throw new Error("The saved signature for the person on duty could not be loaded.");
   }
-  if (!isPascal && !signedStrokes.length) {
+  if (!hasAutomaticSignature && !signedStrokes.length) {
     throw new Error("The person on duty must draw their signature before downloading.");
   }
 
@@ -145,7 +147,7 @@ export async function fillChecklistPdf(templateBytes, data) {
     maxLines: 2,
     lineHeight: 12,
   });
-  if (isPascal) {
+  if (hasAutomaticSignature) {
     const signatureImage = await pdf.embedPng(data.signatureImage);
     const dimensions = signatureImage.scaleToFit(SIGNATURE_BOX.width, SIGNATURE_BOX.height);
     pageTwo.drawImage(signatureImage, {
