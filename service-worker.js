@@ -52,8 +52,15 @@ self.addEventListener("fetch", (event) => {
   }
 
   event.respondWith(
-    caches.open(CACHE_NAME)
-      .then((cache) => cache.match(request, { ignoreSearch: true }))
-      .then((cached) => cached || fetch(request)),
+    fetch(request)
+      .then((response) => {
+        const copy = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+        return response;
+      })
+      .catch(async () => {
+        const cache = await caches.open(CACHE_NAME);
+        return await cache.match(request, { ignoreSearch: true });
+      }),
   );
 });
