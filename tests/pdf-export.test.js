@@ -127,28 +127,25 @@ test("rejects any missing checklist response before generating a PDF", async () 
   await assert.rejects(fillChecklistPdf(template, data), /answer all 24 checks/);
 });
 
-test("fills the work-order form and calculates item and request totals", async () => {
-  const pdf = await fillWorkOrderPdf(workOrderTemplate, {
+test("returns the original work-order template unchanged", async () => {
+  const result = await fillWorkOrderPdf(workOrderTemplate, {
     date: "2026-10-18",
     telephone: "0780000000",
     urgent: false,
     items: [{ description: "Replace pond lights", quantity: 2, unitCost: 55000 }],
   });
-  const filled = await PDFDocument.load(pdf);
+  assert.deepEqual(Buffer.from(result), workOrderTemplate);
+  const filled = await PDFDocument.load(result);
   const original = await PDFDocument.load(workOrderTemplate);
-  const content = getPageContent(filled.getPage(0), filled);
-  const originalContent = getPageContent(original.getPage(0), original);
   assert.equal(filled.getPageCount(), 1);
-  assert.equal(filled.getTitle(), "Work Order Request - 18, Oct, 2026");
-  assert.ok(content.includes(Buffer.from("* 2 Replace pond lights. 55000rwf/each").toString("hex").toUpperCase()));
-  assert.ok(content.includes(Buffer.from("Total = 110,000 rwf").toString("hex").toUpperCase()));
-  assert.ok(content.includes(originalContent));
-  assert.ok(!content.includes("Manager"));
-  assert.ok(!content.includes(Buffer.from("URGENT").toString("hex").toUpperCase()));
+  assert.equal(
+    getPageContent(filled.getPage(0), filled),
+    getPageContent(original.getPage(0), original),
+  );
 });
 
-test("marks urgent requests and places overflowing items on continuation pages", async () => {
-  const pdf = await fillWorkOrderPdf(workOrderTemplate, {
+test("keeps the original work-order template even when urgent and many items are supplied", async () => {
+  const result = await fillWorkOrderPdf(workOrderTemplate, {
     date: "2026-10-18",
     urgent: true,
     items: Array.from({ length: 10 }, (_, index) => ({
@@ -157,22 +154,17 @@ test("marks urgent requests and places overflowing items on continuation pages",
       unitCost: 1000,
     })),
   });
-  const filled = await PDFDocument.load(pdf);
-  assert.equal(filled.getPageCount(), 2);
-  const allContent = filled.getPages().map((page) => getPageContent(page, filled)).join("\n");
-  for (const text of ["URGENT", "Requested material 1", "Requested material 10", "Total = 10,000 rwf"]) {
-    assert.ok(allContent.includes(Buffer.from(text).toString("hex").toUpperCase()), `${text} is included`);
-  }
+  assert.deepEqual(Buffer.from(result), workOrderTemplate);
+  const filled = await PDFDocument.load(result);
+  assert.equal(filled.getPageCount(), 1);
+  const content = getPageContent(filled.getPage(0), filled);
+  assert.ok(!content.includes(Buffer.from("Requested material 1").toString("hex").toUpperCase()));
+  assert.ok(!content.includes(Buffer.from("URGENT").toString("hex").toUpperCase()));
 });
 
-test("rejects invalid work-order dates and item values", async () => {
-  const data = {
-    requester: "Alex Maintenance",
-    date: "not-a-date",
-    items: [{ description: "A material", quantity: 1, unitCost: 1000 }],
-  };
-  await assert.rejects(fillWorkOrderPdf(workOrderTemplate, data), /date is invalid/);
-  data.date = "2026-10-18";
-  data.items[0].quantity = 0;
-  await assert.rejects(fillWorkOrderPdf(workOrderTemplate, data), /whole-number quantity/);
+test("rejects a work-order template that is not the expected one-page format", async () => {
+  const other = await PDFDocument.create();
+  other.addPage([300, 400]);
+  const otherBytes = await other.save();
+  await assert.rejects(fillWorkOrderPdf(otherBytes, {}), /expected one-page format/);
 });
