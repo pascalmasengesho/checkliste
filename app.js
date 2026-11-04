@@ -161,10 +161,9 @@ function createChecklist() {
       commentLabel.className = "comment-label";
       commentLabel.htmlFor = `comment-${check.number}`;
       commentLabel.innerHTML = 'Comment <span class="comment-prompt">· Optional</span>';
-      const commentInput = document.createElement("input");
+      const commentInput = document.createElement("textarea");
       commentInput.id = `comment-${check.number}`;
-      commentInput.type = "text";
-      commentInput.maxLength = 120;
+      commentInput.rows = 3;
       commentInput.placeholder = "Add a note about this check (optional)";
       commentInput.autocomplete = "off";
       commentInner.append(commentLabel, commentInput);
@@ -241,7 +240,7 @@ function resetFormForDuty(name) {
   form.reset();
   for (const row of document.querySelectorAll(".check-row")) {
     updateCommentDisclosure(row);
-    const comment = row.querySelector(".row-comment input");
+    const comment = row.querySelector(".row-comment textarea");
     comment.required = false;
     comment.removeAttribute("aria-invalid");
   }
@@ -267,7 +266,7 @@ function setDutySignatureInstructions(name) {
 }
 
 function updateCommentDisclosure(row, reveal = null) {
-  const commentInput = row.querySelector(".row-comment input");
+  const commentInput = row.querySelector(".row-comment textarea");
   const commentToggle = row.querySelector(".row-comment-toggle");
   const hasComment = Boolean(commentInput.value.trim());
   const expanded = reveal ?? hasComment;
@@ -277,7 +276,7 @@ function updateCommentDisclosure(row, reveal = null) {
 }
 
 function setAnswerState(row) {
-  const comment = row.querySelector(".row-comment input");
+  const comment = row.querySelector(".row-comment textarea");
   comment.required = false;
   if (comment.value.trim()) comment.removeAttribute("aria-invalid");
 }
@@ -344,7 +343,7 @@ function loadSavedState(storageKey, name) {
   if (state.version !== 2 || !state.answers || typeof state.answers !== "object") {
     throw new Error("The saved checklist has an unsupported format. Start a new checklist to replace it.");
   }
-  dateInput.value = typeof state.date === "string" ? state.date : "";
+  dateInput.value = todayIso();
   personnelInput.value = name;
   notesInput.value = typeof state.notes === "string" ? state.notes : "";
 
@@ -545,7 +544,7 @@ function clearChecklist() {
   form.reset();
   for (const row of document.querySelectorAll(".check-row")) {
     updateCommentDisclosure(row);
-    const comment = row.querySelector(".row-comment input");
+    const comment = row.querySelector(".row-comment textarea");
     comment.required = false;
     comment.removeAttribute("aria-invalid");
   }
@@ -587,11 +586,11 @@ itemsRoot.addEventListener("click", (event) => {
   const row = toggle.closest(".check-row");
   updateCommentDisclosure(row, toggle.getAttribute("aria-expanded") !== "true");
   if (toggle.getAttribute("aria-expanded") === "true") {
-    row.querySelector(".row-comment input").focus();
+    row.querySelector(".row-comment textarea").focus();
   }
 });
 itemsRoot.addEventListener("input", (event) => {
-  if (event.target.matches(".row-comment input")) {
+  if (event.target.matches(".row-comment textarea")) {
     if (event.target.value.trim()) event.target.removeAttribute("aria-invalid");
     updateCommentDisclosure(event.target.closest(".check-row"), true);
     scheduleSave();

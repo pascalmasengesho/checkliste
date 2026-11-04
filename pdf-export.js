@@ -109,6 +109,7 @@ export async function fillChecklistPdf(templateBytes, data) {
   ]);
   const pageOne = pages[0];
   const pageTwo = pages[1];
+  const commentContinuations = [];
   pageOne.drawText(dateText, { x: 457, y: 717, font: boldFont, size: 9, color: INK });
 
   for (let index = 0; index < ROWS.length; index += 1) {
@@ -124,16 +125,27 @@ export async function fillChecklistPdf(templateBytes, data) {
       color: INK,
     });
     if (answer.comment?.trim()) {
-      drawWrappedText(page, answer.comment.trim(), {
-        x: 355,
-        y: lower + (upper - lower) / 2 + 7,
-        font: regularFont,
-        size: 6,
-        color: INK,
-        maxWidth: 195,
-        maxLines: 3,
-        lineHeight: 7,
+      const commentLines = wrappedLines(answer.comment.trim(), regularFont, 6, 195, Infinity);
+      const displayedLines = commentLines.slice(0, 3);
+      if (commentLines.length > 3) {
+        let lastLine = displayedLines[2].replace(/[ .]+$/, "");
+        while (lastLine && regularFont.widthOfTextAtSize(`${lastLine}...`, 6) > 195) {
+          lastLine = lastLine.slice(0, -1);
+        }
+        displayedLines[2] = `${lastLine}...`;
+      }
+      displayedLines.forEach((line, lineIndex) => {
+        page.drawText(line, {
+          x: 355,
+          y: lower + (upper - lower) / 2 + 7 - lineIndex * 7,
+          font: regularFont,
+          size: 6,
+          color: INK,
+        });
       });
+      if (commentLines.length > 3) {
+        commentContinuations.push({ number: index + 1, lines: commentLines.slice(3) });
+      }
     }
   }
 
@@ -188,6 +200,54 @@ export async function fillChecklistPdf(templateBytes, data) {
       maxLines: 3,
       lineHeight: 12,
     });
+  }
+
+  let continuationPage;
+  let continuationY;
+  const startContinuationPage = () => {
+    continuationPage = pdf.addPage([612, 792]);
+    continuationPage.drawText("Checklist comments (continued)", {
+      x: 72,
+      y: 750,
+      font: boldFont,
+      size: 14,
+      color: INK,
+    });
+    continuationY = 720;
+  };
+
+  for (const comment of commentContinuations) {
+    if (!continuationPage || continuationY < 70) startContinuationPage();
+    continuationPage.drawText(`Check ${comment.number} comment:`, {
+      x: 72,
+      y: continuationY,
+      font: boldFont,
+      size: 10,
+      color: INK,
+    });
+    continuationY -= 16;
+    for (const line of comment.lines) {
+      if (continuationY < 55) {
+        startContinuationPage();
+        continuationPage.drawText(`Check ${comment.number} comment (continued):`, {
+          x: 72,
+          y: continuationY,
+          font: boldFont,
+          size: 10,
+          color: INK,
+        });
+        continuationY -= 16;
+      }
+      continuationPage.drawText(line, {
+        x: 84,
+        y: continuationY,
+        font: regularFont,
+        size: 9,
+        color: INK,
+      });
+      continuationY -= 12;
+    }
+    continuationY -= 10;
   }
 
   pdf.setTitle(`Maintenance Daily Checklist - ${dateText}`);

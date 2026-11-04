@@ -8,8 +8,8 @@ Use **Open report generator** near the top of the app to open the separate repor
 
 1. Double-click `START.bat`.
 2. Enter the name of the person on duty. The app asks for this each time it opens and keeps a separate local draft for each name.
-3. Answer all 24 checks. Click **Add comment** under any check to open its optional comment box; comments are included in that check's section of the downloaded PDF.
-4. Enter the date. Masengesho Pascal and Mwumvaneza Fabrice's saved signatures are applied automatically when their exact names are selected; other personnel must draw their own signature.
+3. Answer all 24 checks. The date is set to the current day automatically. Click **Add comment** under any check to open its optional multiline comment box; long comments continue on extra pages in the downloaded PDF.
+4. Masengesho Pascal and Mwumvaneza Fabrice's saved signatures are applied automatically when their exact names are selected; other personnel must draw their own signature.
 5. Select **Download completed PDF**.
 
 The generated PDF retains the original two-page checklist. Form entries and hand-drawn signatures stay in this browser and are never sent to a server. Pascal's saved signature is a public static asset in the app. Keep the terminal window open while using the local app.

@@ -319,21 +319,23 @@ h2 { margin-bottom: 0; font-size: 20px; line-height: 1.3; font-weight: 700; }
 .comment-label { display: block; margin-bottom: 6px; color: #717b73; font-size: 10px; font-weight: 650; }
 .comment-prompt { color: #929b94; font-weight: 400; }
 
-.row-comment input {
+.row-comment textarea {
   width: 100%;
-  height: 35px;
-  padding: 0 10px;
+  min-height: 72px;
+  padding: 9px 10px;
   border: 1px solid #e5e9e4;
   border-radius: 6px;
   outline: none;
   color: var(--ink);
   font-size: 11px;
+  line-height: 1.5;
+  resize: vertical;
   transition: border-color .15s, box-shadow .15s;
 }
 
-.row-comment input::placeholder { color: #a0a9a2; }
-.row-comment input:focus { border-color: #55a181; box-shadow: 0 0 0 3px rgb(25 116 86 / 9%); }
-.row-comment input[aria-invalid="true"] { border-color: #cb726b; }
+.row-comment textarea::placeholder { color: #a0a9a2; }
+.row-comment textarea:focus { border-color: #55a181; box-shadow: 0 0 0 3px rgb(25 116 86 / 9%); }
+.row-comment textarea[aria-invalid="true"] { border-color: #cb726b; }
 
 .notes-field { margin-top: 23px; }
 

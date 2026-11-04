@@ -56,6 +56,19 @@ test("includes an optional comment when a check is marked Yes", async () => {
   assert.equal(filled.getPageCount(), 2);
 });
 
+test("keeps long comments complete on additional PDF pages", async () => {
+  const data = createData();
+  const marker = "FINALCOMMENTMARKER";
+  data.answers[0].comment = `${"maintenance ".repeat(1500)}${marker}`;
+  const pdf = await fillChecklistPdf(template, data);
+  const filled = await PDFDocument.load(pdf);
+  assert.ok(filled.getPageCount() > 3);
+  const continuationContent = filled.getPages().slice(2)
+    .map((page) => getPageContent(page, filled))
+    .join("\n");
+  assert.ok(continuationContent.includes(Buffer.from(marker).toString("hex").toUpperCase()));
+});
+
 test("requires a hand-drawn signature for every completed PDF", async () => {
   const data = createData();
   data.signature = [];
