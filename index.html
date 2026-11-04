@@ -35,6 +35,7 @@
         <svg aria-hidden="true" viewBox="0 0 20 20" fill="none"><path d="M11.25 3.75h5v5m-.5-4.5-7 7M15 10.75v4.5a1 1 0 0 1-1 1H4.75a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
         Open report
       </a>
+      <button class="report-link work-order-open" id="open-work-order" type="button">Create work order</button>
     </section>
 
     <form id="checklist-form" novalidate>
@@ -150,6 +151,69 @@
       <p><strong>Android:</strong> In Chrome, tap the menu, then choose <strong>Install app</strong> or <strong>Add to Home screen</strong>.</p>
       <div class="dialog-actions">
         <button class="button button-secondary" value="close">Close</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="confirm-dialog work-order-dialog" id="work-order-dialog" aria-labelledby="work-order-title">
+    <form id="work-order-form" novalidate>
+      <p class="eyebrow">KOZO RESTAURANT</p>
+      <h2 id="work-order-title">Work order request</h2>
+      <p class="work-order-intro">Describe the work and add requested materials. The total is calculated automatically.</p>
+      <div class="work-order-fields">
+        <label class="field">
+          <span>Requester name <span class="required">*</span></span>
+          <input id="work-order-requester" name="requester" maxlength="90" autocomplete="name" required>
+        </label>
+        <label class="field">
+          <span>Date</span>
+          <input id="work-order-date" name="date" type="date" readonly required>
+        </label>
+        <label class="field">
+          <span>Department</span>
+          <input id="work-order-department" name="department" maxlength="80">
+        </label>
+        <label class="field">
+          <span>Telephone</span>
+          <input id="work-order-telephone" name="telephone" type="tel" maxlength="40" autocomplete="tel">
+        </label>
+        <label class="field">
+          <span>Location</span>
+          <input id="work-order-location" name="location" maxlength="100">
+        </label>
+        <label class="work-order-urgent">
+          <input id="work-order-urgent" name="urgent" type="checkbox">
+          <span>Urgent</span>
+        </label>
+      </div>
+
+      <section class="work-order-items-section" aria-labelledby="work-order-items-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">REQUEST DETAILS</p>
+            <h3 id="work-order-items-title">Items and estimated costs</h3>
+          </div>
+          <button class="button button-secondary add-work-order-item" id="add-work-order-item" type="button">Add item</button>
+        </div>
+        <div class="work-order-items" id="work-order-items"></div>
+        <p class="work-order-total">Total <strong id="work-order-total">0 RWF</strong></p>
+      </section>
+
+      <div class="work-order-fields approval-fields">
+        <label class="field">
+          <span>Approved by</span>
+          <input id="work-order-approved" name="approvedBy" maxlength="90">
+        </label>
+        <label class="field">
+          <span>Authorized by</span>
+          <input id="work-order-authorized" name="authorizedBy" maxlength="90">
+        </label>
+      </div>
+      <p class="work-order-maintenance-note">Maintenance-use completion fields will remain blank for the maintenance team.</p>
+      <p class="form-message" id="work-order-message" role="status" aria-live="polite"></p>
+      <div class="dialog-actions work-order-actions">
+        <button class="button button-secondary" id="close-work-order" type="button">Cancel</button>
+        <button class="button button-primary" type="submit">Download work-order PDF</button>
       </div>
     </form>
   </dialog>

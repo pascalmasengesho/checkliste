@@ -12,6 +12,7 @@ await mkdir(path.join(output, "assets"), { recursive: true });
 for (const file of ["index.html", "styles.css", "app.js", "template.pdf", "manifest.webmanifest"]) {
   await cp(path.join(root, file), path.join(output, file));
 }
+await cp(path.join(root, "assets", "work-order-template.pdf"), path.join(output, "assets", "work-order-template.pdf"));
 await cp(path.join(root, "service-worker.js"), path.join(output, "service-worker.js"));
 await cp(
   path.join(root, "assets", "masengesho-pascal-signature.png"),
@@ -43,6 +44,7 @@ const buildFiles = [
   "app.js",
   "manifest.webmanifest",
   "template.pdf",
+  "assets/work-order-template.pdf",
   "vendor/checklist-pdf.js",
   "assets/masengesho-pascal-signature.png",
   "assets/mwumvaneza-fabrice-signature.png",

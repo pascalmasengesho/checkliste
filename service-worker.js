@@ -9,6 +9,7 @@ const APP_FILES = [
   "./app.js?v=__APP_VERSION__",
   "./vendor/checklist-pdf.js?v=__PDF_VERSION__",
   "./template.pdf",
+  "./assets/work-order-template.pdf",
   "./assets/masengesho-pascal-signature.png",
   "./assets/mwumvaneza-fabrice-signature.png",
   "./assets/icon-192.png",

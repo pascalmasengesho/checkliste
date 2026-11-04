@@ -64,6 +64,10 @@ let installPromptEvent = null;
 
 const installButton = document.getElementById("install-app");
 const installDialog = document.getElementById("install-dialog");
+const workOrderDialog = document.getElementById("work-order-dialog");
+const workOrderForm = document.getElementById("work-order-form");
+const workOrderItemsRoot = document.getElementById("work-order-items");
+const workOrderMessage = document.getElementById("work-order-message");
 
 signatureContext.strokeStyle = "#285e49";
 signatureContext.lineWidth = 4.5;
@@ -539,6 +543,164 @@ async function downloadPdf() {
   }
 }
 
+function formatRwf(value) {
+  return `${Math.round(value).toLocaleString("en-US")} RWF`;
+}
+
+function updateWorkOrderTotal() {
+  const rows = [...workOrderItemsRoot.querySelectorAll(".work-order-item")];
+  let total = 0;
+  for (const row of rows) {
+    const quantity = Number(row.querySelector('[name="quantity"]').value);
+    const unitCost = Number(row.querySelector('[name="unitCost"]').value);
+    const lineTotal = quantity * unitCost;
+    row.querySelector(".work-order-item-total").textContent = Number.isSafeInteger(lineTotal)
+      ? formatRwf(lineTotal)
+      : "Amount too large";
+    if (Number.isSafeInteger(lineTotal)) total += lineTotal;
+  }
+  document.getElementById("work-order-total").textContent = Number.isSafeInteger(total)
+    ? formatRwf(total)
+    : "Amount too large";
+  for (const removeButton of workOrderItemsRoot.querySelectorAll(".remove-work-order-item")) {
+    removeButton.disabled = rows.length === 1;
+  }
+}
+
+function addWorkOrderItem() {
+  const row = document.createElement("div");
+  row.className = "work-order-item";
+  const descriptionLabel = document.createElement("label");
+  descriptionLabel.className = "field item-description";
+  const descriptionTitle = document.createElement("span");
+  descriptionTitle.textContent = "What are you requesting? *";
+  const description = document.createElement("textarea");
+  description.name = "description";
+  description.rows = 2;
+  description.maxLength = 600;
+  description.placeholder = "Describe the work or item";
+  description.required = true;
+  descriptionLabel.append(descriptionTitle, description);
+
+  const quantityLabel = document.createElement("label");
+  quantityLabel.className = "field";
+  const quantityTitle = document.createElement("span");
+  quantityTitle.textContent = "Quantity *";
+  const quantity = document.createElement("input");
+  quantity.name = "quantity";
+  quantity.type = "number";
+  quantity.min = "1";
+  quantity.step = "1";
+  quantity.value = "1";
+  quantity.required = true;
+  quantityLabel.append(quantityTitle, quantity);
+
+  const costLabel = document.createElement("label");
+  costLabel.className = "field";
+  const costTitle = document.createElement("span");
+  costTitle.textContent = "Unit cost (RWF) *";
+  const unitCost = document.createElement("input");
+  unitCost.name = "unitCost";
+  unitCost.type = "number";
+  unitCost.min = "0";
+  unitCost.step = "1";
+  unitCost.placeholder = "0";
+  unitCost.required = true;
+  costLabel.append(costTitle, unitCost);
+
+  const lineTotal = document.createElement("span");
+  lineTotal.className = "work-order-item-total";
+  lineTotal.textContent = "0 RWF";
+  const removeButton = document.createElement("button");
+  removeButton.className = "remove-work-order-item";
+  removeButton.type = "button";
+  removeButton.textContent = "Remove";
+  removeButton.setAttribute("aria-label", "Remove requested item");
+  row.append(descriptionLabel, quantityLabel, costLabel, lineTotal, removeButton);
+  workOrderItemsRoot.append(row);
+  updateWorkOrderTotal();
+}
+
+function getWorkOrderData() {
+  const items = [...workOrderItemsRoot.querySelectorAll(".work-order-item")].map((row) => ({
+    description: row.querySelector('[name="description"]').value.trim(),
+    quantity: Number(row.querySelector('[name="quantity"]').value),
+    unitCost: Number(row.querySelector('[name="unitCost"]').value),
+  }));
+  return {
+    requester: document.getElementById("work-order-requester").value.trim(),
+    date: document.getElementById("work-order-date").value,
+    department: document.getElementById("work-order-department").value,
+    telephone: document.getElementById("work-order-telephone").value,
+    location: document.getElementById("work-order-location").value,
+    urgent: document.getElementById("work-order-urgent").checked,
+    approvedBy: document.getElementById("work-order-approved").value,
+    authorizedBy: document.getElementById("work-order-authorized").value,
+    items,
+  };
+}
+
+async function downloadWorkOrder(event) {
+  event.preventDefault();
+  workOrderMessage.textContent = "";
+  workOrderMessage.classList.remove("success");
+  const data = getWorkOrderData();
+  if (!data.requester) {
+    document.getElementById("work-order-requester").focus();
+    workOrderMessage.textContent = "Enter the requester name.";
+    return;
+  }
+  const invalidItem = data.items.findIndex((item) => (
+    !item.description
+    || !Number.isSafeInteger(item.quantity)
+    || item.quantity < 1
+    || !Number.isSafeInteger(item.unitCost)
+    || item.unitCost < 0
+    || !Number.isSafeInteger(item.quantity * item.unitCost)
+  ));
+  if (invalidItem !== -1) {
+    const row = workOrderItemsRoot.querySelectorAll(".work-order-item")[invalidItem];
+    const invalidField = [...row.querySelectorAll("textarea, input")].find((input) => !input.checkValidity());
+    if (invalidField) invalidField.reportValidity();
+    workOrderMessage.textContent = `Complete the description, quantity, and cost for item ${invalidItem + 1}.`;
+    invalidField?.focus();
+    return;
+  }
+  const total = data.items.reduce((sum, item) => sum + item.quantity * item.unitCost, 0);
+  if (!Number.isSafeInteger(total)) {
+    workOrderMessage.textContent = "The work-order total is too large. Reduce the quantities or costs.";
+    return;
+  }
+
+  const submitButton = workOrderForm.querySelector('button[type="submit"]');
+  submitButton.disabled = true;
+  submitButton.setAttribute("aria-busy", "true");
+  submitButton.textContent = "Preparing your PDF…";
+  try {
+    const response = await fetch(new URL("./assets/work-order-template.pdf", window.location.href));
+    if (!response.ok) throw new Error(`The work-order form could not be loaded (HTTP ${response.status}).`);
+    const pdfBytes = await window.ChecklistPdf.fillWorkOrderPdf(await response.arrayBuffer(), data);
+    const pdf = new Blob([pdfBytes], { type: "application/pdf" });
+    const url = URL.createObjectURL(pdf);
+    const download = document.createElement("a");
+    download.href = url;
+    download.download = `Work-Order-${data.date}.pdf`;
+    download.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
+    workOrderMessage.textContent = "Your work-order PDF has been downloaded.";
+    workOrderMessage.classList.add("success");
+  } catch (error) {
+    console.error("Unable to generate the work-order PDF.", error);
+    workOrderMessage.textContent = error instanceof Error
+      ? error.message
+      : "Could not create the work-order PDF. Please check your connection and try again.";
+  } finally {
+    submitButton.disabled = false;
+    submitButton.removeAttribute("aria-busy");
+    submitButton.textContent = "Download work-order PDF";
+  }
+}
+
 function clearChecklist() {
   suppressSave = true;
   form.reset();
@@ -653,6 +815,27 @@ document.getElementById("confirm-reset").addEventListener("click", (event) => {
   resetDialog.close();
   clearChecklist();
 });
+document.getElementById("open-work-order").addEventListener("click", () => {
+  const requester = document.getElementById("work-order-requester");
+  if (!requester.value.trim()) requester.value = personnelInput.value.trim();
+  document.getElementById("work-order-date").value = todayIso();
+  workOrderMessage.textContent = "";
+  workOrderMessage.classList.remove("success");
+  if (!workOrderItemsRoot.children.length) addWorkOrderItem();
+  workOrderDialog.showModal();
+  requester.focus();
+});
+document.getElementById("close-work-order").addEventListener("click", () => workOrderDialog.close());
+document.getElementById("add-work-order-item").addEventListener("click", addWorkOrderItem);
+workOrderItemsRoot.addEventListener("input", updateWorkOrderTotal);
+workOrderItemsRoot.addEventListener("click", (event) => {
+  if (!event.target.matches(".remove-work-order-item")) return;
+  if (workOrderItemsRoot.children.length > 1) {
+    event.target.closest(".work-order-item").remove();
+    updateWorkOrderTotal();
+  }
+});
+workOrderForm.addEventListener("submit", downloadWorkOrder);
 
 window.addEventListener("storage", (event) => {
   if (event.key === STORAGE_KEY && event.newValue) {

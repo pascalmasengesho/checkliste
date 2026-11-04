@@ -4,10 +4,11 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { decodePDFRawStream, PDFDict, PDFDocument, PDFName } from "pdf-lib";
-import { fillChecklistPdf } from "../pdf-export.js";
+import { fillChecklistPdf, fillWorkOrderPdf } from "../pdf-export.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const template = await readFile(path.join(root, "template.pdf"));
+const workOrderTemplate = await readFile(path.join(root, "assets", "work-order-template.pdf"));
 const pascalSignature = await readFile(path.join(root, "assets", "masengesho-pascal-signature.png"));
 const fabriceSignature = await readFile(path.join(root, "assets", "mwumvaneza-fabrice-signature.png"));
 
@@ -122,4 +123,58 @@ test("rejects any missing checklist response before generating a PDF", async () 
   const data = createData();
   data.answers.pop();
   await assert.rejects(fillChecklistPdf(template, data), /answer all 24 checks/);
+});
+
+test("fills the work-order form and calculates item and request totals", async () => {
+  const pdf = await fillWorkOrderPdf(workOrderTemplate, {
+    requester: "Alex Maintenance",
+    date: "2026-10-18",
+    department: "Maintenance",
+    telephone: "0780000000",
+    location: "Main pond",
+    urgent: false,
+    approvedBy: "Manager",
+    authorizedBy: "Director",
+    items: [{ description: "Replace pond lights", quantity: 2, unitCost: 55000 }],
+  });
+  const filled = await PDFDocument.load(pdf);
+  const content = getPageContent(filled.getPage(0), filled);
+  assert.equal(filled.getPageCount(), 1);
+  assert.equal(filled.getTitle(), "Work Order Request - 18, Oct, 2026");
+  assert.ok(content.includes(Buffer.from("Replace pond lights").toString("hex").toUpperCase()));
+  assert.ok(content.includes(Buffer.from("Qty 2 x 55,000 RWF = 110,000 RWF").toString("hex").toUpperCase()));
+  assert.ok(content.includes(Buffer.from("Total = 110,000 RWF").toString("hex").toUpperCase()));
+  assert.ok(content.includes(Buffer.from("Manager").toString("hex").toUpperCase()));
+  assert.ok(!content.includes(Buffer.from("URGENT").toString("hex").toUpperCase()));
+});
+
+test("marks urgent requests and places overflowing items on continuation pages", async () => {
+  const pdf = await fillWorkOrderPdf(workOrderTemplate, {
+    requester: "Alex Maintenance",
+    date: "2026-10-18",
+    urgent: true,
+    items: Array.from({ length: 5 }, (_, index) => ({
+      description: `Requested material ${index + 1}`,
+      quantity: 1,
+      unitCost: 1000,
+    })),
+  });
+  const filled = await PDFDocument.load(pdf);
+  assert.equal(filled.getPageCount(), 2);
+  const allContent = filled.getPages().map((page) => getPageContent(page, filled)).join("\n");
+  for (const text of ["URGENT", "Requested material 1", "Requested material 5", "Total = 5,000 RWF"]) {
+    assert.ok(allContent.includes(Buffer.from(text).toString("hex").toUpperCase()), `${text} is included`);
+  }
+});
+
+test("rejects invalid work-order dates and item values", async () => {
+  const data = {
+    requester: "Alex Maintenance",
+    date: "not-a-date",
+    items: [{ description: "A material", quantity: 1, unitCost: 1000 }],
+  };
+  await assert.rejects(fillWorkOrderPdf(workOrderTemplate, data), /date is invalid/);
+  data.date = "2026-10-18";
+  data.items[0].quantity = 0;
+  await assert.rejects(fillWorkOrderPdf(workOrderTemplate, data), /whole-number quantity/);
 });

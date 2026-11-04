@@ -253,3 +253,156 @@ export async function fillChecklistPdf(templateBytes, data) {
   pdf.setTitle(`Maintenance Daily Checklist - ${dateText}`);
   return pdf.save();
 }
+
+function formatWorkOrderDate(value) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value ?? "");
+  if (!match) throw new Error("The work-order date is invalid.");
+  const [, year, month, day] = match;
+  const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+  if (date.toISOString().slice(0, 10) !== value) throw new Error("The work-order date is invalid.");
+  return `${day}, ${date.toLocaleString("en", { month: "short", timeZone: "UTC" })}, ${year}`;
+}
+
+function formatRwf(value) {
+  return `${Math.round(value).toLocaleString("en-US")} RWF`;
+}
+
+function maskWorkOrderFields(page) {
+  const fields = [
+    { x: 163, y: 510, width: 176, height: 29 },
+    { x: 431, y: 509, width: 117, height: 28 },
+    { x: 163, y: 475, width: 176, height: 28 },
+    { x: 431, y: 475, width: 116, height: 28 },
+    { x: 163, y: 440, width: 176, height: 28 },
+    { x: 431, y: 440, width: 116, height: 28 },
+    { x: 145, y: 315, width: 420, height: 116 },
+    { x: 126, y: 273, width: 143, height: 23 },
+    { x: 408, y: 273, width: 164, height: 23 },
+  ];
+  for (const field of fields) {
+    page.drawRectangle({ ...field, color: rgb(1, 1, 1) });
+  }
+}
+
+function workOrderItemLines(items, font) {
+  const lines = [];
+  items.forEach((item, index) => {
+    const description = printableText(item.description.trim());
+    const quantity = Number(item.quantity);
+    const unitCost = Number(item.unitCost);
+    const itemTotal = quantity * unitCost;
+    if (!description || !Number.isSafeInteger(quantity) || quantity < 1
+      || !Number.isSafeInteger(unitCost) || unitCost < 0 || !Number.isSafeInteger(itemTotal)) {
+      throw new Error(`Enter a description, whole-number quantity, and valid RWF cost for item ${index + 1}.`);
+    }
+    const descriptionLines = wrappedLines(`${index + 1}. ${description}`, font, 8, 395, Infinity);
+    descriptionLines.forEach((text) => lines.push({ text, size: 8, indent: 0 }));
+    lines.push({
+      text: `   Qty ${quantity} x ${formatRwf(unitCost)} = ${formatRwf(itemTotal)}`,
+      size: 7.5,
+      indent: 0,
+    });
+  });
+  return lines;
+}
+
+function drawWorkOrderLines(page, lines, startY, font, maxLines) {
+  const lineHeight = 11;
+  lines.slice(0, maxLines).forEach((line, index) => {
+    page.drawText(line.text, {
+      x: 151 + line.indent,
+      y: startY - index * lineHeight,
+      font,
+      size: line.size,
+      color: INK,
+    });
+  });
+}
+
+export async function fillWorkOrderPdf(templateBytes, data) {
+  if (!data || !Array.isArray(data.items) || !data.items.length) {
+    throw new Error("Add at least one requested item to the work order.");
+  }
+  if (!data.requester?.trim()) throw new Error("Enter the requester name.");
+  const dateText = formatWorkOrderDate(data.date);
+  const pdf = await PDFDocument.load(templateBytes);
+  const pages = pdf.getPages();
+  if (pages.length !== 1 || pages[0].getWidth() !== 612 || pages[0].getHeight() !== 792) {
+    throw new Error("The work-order form template is not the expected one-page format.");
+  }
+  const page = pages[0];
+  const [regularFont, boldFont] = await Promise.all([
+    pdf.embedFont(StandardFonts.Helvetica),
+    pdf.embedFont(StandardFonts.HelveticaBold),
+  ]);
+  maskWorkOrderFields(page);
+  drawWrappedText(page, data.requester.trim(), {
+    x: 166, y: 520, font: regularFont, size: 8, color: INK, maxWidth: 168, maxLines: 1, lineHeight: 9,
+  });
+  drawWrappedText(page, dateText, {
+    x: 434, y: 520, font: regularFont, size: 8, color: INK, maxWidth: 110, maxLines: 1, lineHeight: 9,
+  });
+  drawWrappedText(page, data.department?.trim() ?? "", {
+    x: 166, y: 485, font: regularFont, size: 8, color: INK, maxWidth: 168, maxLines: 1, lineHeight: 9,
+  });
+  drawWrappedText(page, data.telephone?.trim() ?? "", {
+    x: 434, y: 485, font: regularFont, size: 8, color: INK, maxWidth: 108, maxLines: 1, lineHeight: 9,
+  });
+  drawWrappedText(page, data.location?.trim() ?? "", {
+    x: 166, y: 450, font: regularFont, size: 8, color: INK, maxWidth: 168, maxLines: 1, lineHeight: 9,
+  });
+  if (data.urgent) {
+    page.drawText("URGENT", { x: 435, y: 450, font: boldFont, size: 8, color: INK });
+  }
+  drawWrappedText(page, data.approvedBy?.trim() ?? "", {
+    x: 130, y: 280, font: regularFont, size: 8, color: INK, maxWidth: 136, maxLines: 1, lineHeight: 9,
+  });
+  drawWrappedText(page, data.authorizedBy?.trim() ?? "", {
+    x: 412, y: 280, font: regularFont, size: 8, color: INK, maxWidth: 156, maxLines: 1, lineHeight: 9,
+  });
+
+  const lines = workOrderItemLines(data.items, regularFont);
+  const total = data.items.reduce((sum, item) => sum + Number(item.quantity) * Number(item.unitCost), 0);
+  if (!Number.isSafeInteger(total)) throw new Error("The work-order total is too large.");
+  const linesOnFirstPage = 7;
+  drawWorkOrderLines(page, lines, 423, regularFont, linesOnFirstPage);
+  page.drawText(`Total = ${formatRwf(total)}`, {
+    x: 151,
+    y: 323,
+    font: boldFont,
+    size: 8,
+    color: INK,
+  });
+
+  let remainingLines = lines.slice(linesOnFirstPage);
+  while (remainingLines.length) {
+    const continuationPage = pdf.addPage([612, 792]);
+    continuationPage.drawText("WORK ORDER REQUEST FORM — CONTINUED", {
+      x: 56,
+      y: 748,
+      font: boldFont,
+      size: 14,
+      color: INK,
+    });
+    continuationPage.drawText(`Requester: ${printableText(data.requester.trim())}    Date: ${dateText}`, {
+      x: 56,
+      y: 725,
+      font: regularFont,
+      size: 9,
+      color: INK,
+    });
+    continuationPage.drawText(`Total = ${formatRwf(total)}`, {
+      x: 56,
+      y: 700,
+      font: boldFont,
+      size: 10,
+      color: INK,
+    });
+    const linesOnPage = Math.min(remainingLines.length, 52);
+    drawWorkOrderLines(continuationPage, remainingLines.slice(0, linesOnPage), 672, regularFont, linesOnPage);
+    remainingLines = remainingLines.slice(linesOnPage);
+  }
+
+  pdf.setTitle(`Work Order Request - ${dateText}`);
+  return pdf.save();
+}
