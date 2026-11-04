@@ -26,7 +26,9 @@ function createData() {
 }
 
 function getPageContent(page, pdf) {
-  return page.node.Contents().asArray()
+  const contents = page.node.Contents();
+  const streams = typeof contents.asArray === "function" ? contents.asArray() : [contents];
+  return streams
     .map((reference) => Buffer.from(decodePDFRawStream(pdf.context.lookup(reference)).decode()).toString("latin1"))
     .join("\n");
 }
@@ -127,33 +129,29 @@ test("rejects any missing checklist response before generating a PDF", async () 
 
 test("fills the work-order form and calculates item and request totals", async () => {
   const pdf = await fillWorkOrderPdf(workOrderTemplate, {
-    requester: "Alex Maintenance",
     date: "2026-10-18",
-    department: "Maintenance",
     telephone: "0780000000",
-    location: "Main pond",
     urgent: false,
-    approvedBy: "Manager",
-    authorizedBy: "Director",
     items: [{ description: "Replace pond lights", quantity: 2, unitCost: 55000 }],
   });
   const filled = await PDFDocument.load(pdf);
+  const original = await PDFDocument.load(workOrderTemplate);
   const content = getPageContent(filled.getPage(0), filled);
+  const originalContent = getPageContent(original.getPage(0), original);
   assert.equal(filled.getPageCount(), 1);
   assert.equal(filled.getTitle(), "Work Order Request - 18, Oct, 2026");
-  assert.ok(content.includes(Buffer.from("Replace pond lights").toString("hex").toUpperCase()));
-  assert.ok(content.includes(Buffer.from("Qty 2 x 55,000 RWF = 110,000 RWF").toString("hex").toUpperCase()));
-  assert.ok(content.includes(Buffer.from("Total = 110,000 RWF").toString("hex").toUpperCase()));
-  assert.ok(content.includes(Buffer.from("Manager").toString("hex").toUpperCase()));
+  assert.ok(content.includes(Buffer.from("* 2 Replace pond lights. 55000rwf/each").toString("hex").toUpperCase()));
+  assert.ok(content.includes(Buffer.from("Total = 110,000 rwf").toString("hex").toUpperCase()));
+  assert.ok(content.includes(originalContent));
+  assert.ok(!content.includes("Manager"));
   assert.ok(!content.includes(Buffer.from("URGENT").toString("hex").toUpperCase()));
 });
 
 test("marks urgent requests and places overflowing items on continuation pages", async () => {
   const pdf = await fillWorkOrderPdf(workOrderTemplate, {
-    requester: "Alex Maintenance",
     date: "2026-10-18",
     urgent: true,
-    items: Array.from({ length: 5 }, (_, index) => ({
+    items: Array.from({ length: 10 }, (_, index) => ({
       description: `Requested material ${index + 1}`,
       quantity: 1,
       unitCost: 1000,
@@ -162,7 +160,7 @@ test("marks urgent requests and places overflowing items on continuation pages",
   const filled = await PDFDocument.load(pdf);
   assert.equal(filled.getPageCount(), 2);
   const allContent = filled.getPages().map((page) => getPageContent(page, filled)).join("\n");
-  for (const text of ["URGENT", "Requested material 1", "Requested material 5", "Total = 5,000 RWF"]) {
+  for (const text of ["URGENT", "Requested material 1", "Requested material 10", "Total = 10,000 rwf"]) {
     assert.ok(allContent.includes(Buffer.from(text).toString("hex").toUpperCase()), `${text} is included`);
   }
 });

@@ -264,20 +264,15 @@ function formatWorkOrderDate(value) {
 }
 
 function formatRwf(value) {
-  return `${Math.round(value).toLocaleString("en-US")} RWF`;
+  return `${Math.round(value).toLocaleString("en-US")} rwf`;
 }
 
 function maskWorkOrderFields(page) {
   const fields = [
-    { x: 163, y: 510, width: 176, height: 29 },
-    { x: 431, y: 509, width: 117, height: 28 },
-    { x: 163, y: 475, width: 176, height: 28 },
-    { x: 431, y: 475, width: 116, height: 28 },
-    { x: 163, y: 440, width: 176, height: 28 },
-    { x: 431, y: 440, width: 116, height: 28 },
-    { x: 145, y: 315, width: 420, height: 116 },
-    { x: 126, y: 273, width: 143, height: 23 },
-    { x: 408, y: 273, width: 164, height: 23 },
+    { x: 433, y: 511, width: 112, height: 23 },
+    { x: 433, y: 476, width: 111, height: 23 },
+    { x: 433, y: 441, width: 111, height: 23 },
+    { x: 146.5, y: 315.5, width: 417, height: 117 },
   ];
   for (const field of fields) {
     page.drawRectangle({ ...field, color: rgb(1, 1, 1) });
@@ -295,13 +290,9 @@ function workOrderItemLines(items, font) {
       || !Number.isSafeInteger(unitCost) || unitCost < 0 || !Number.isSafeInteger(itemTotal)) {
       throw new Error(`Enter a description, whole-number quantity, and valid RWF cost for item ${index + 1}.`);
     }
-    const descriptionLines = wrappedLines(`${index + 1}. ${description}`, font, 8, 395, Infinity);
-    descriptionLines.forEach((text) => lines.push({ text, size: 8, indent: 0 }));
-    lines.push({
-      text: `   Qty ${quantity} x ${formatRwf(unitCost)} = ${formatRwf(itemTotal)}`,
-      size: 7.5,
-      indent: 0,
-    });
+    const itemText = `* ${quantity} ${description}. ${unitCost}rwf/each`;
+    const itemLines = wrappedLines(itemText, font, 8, 395, Infinity);
+    itemLines.forEach((text) => lines.push({ text, size: 8 }));
   });
   return lines;
 }
@@ -310,7 +301,7 @@ function drawWorkOrderLines(page, lines, startY, font, maxLines) {
   const lineHeight = 11;
   lines.slice(0, maxLines).forEach((line, index) => {
     page.drawText(line.text, {
-      x: 151 + line.indent,
+      x: 151,
       y: startY - index * lineHeight,
       font,
       size: line.size,
@@ -323,7 +314,6 @@ export async function fillWorkOrderPdf(templateBytes, data) {
   if (!data || !Array.isArray(data.items) || !data.items.length) {
     throw new Error("Add at least one requested item to the work order.");
   }
-  if (!data.requester?.trim()) throw new Error("Enter the requester name.");
   const dateText = formatWorkOrderDate(data.date);
   const pdf = await PDFDocument.load(templateBytes);
   const pages = pdf.getPages();
@@ -336,35 +326,20 @@ export async function fillWorkOrderPdf(templateBytes, data) {
     pdf.embedFont(StandardFonts.HelveticaBold),
   ]);
   maskWorkOrderFields(page);
-  drawWrappedText(page, data.requester.trim(), {
-    x: 166, y: 520, font: regularFont, size: 8, color: INK, maxWidth: 168, maxLines: 1, lineHeight: 9,
-  });
   drawWrappedText(page, dateText, {
     x: 434, y: 520, font: regularFont, size: 8, color: INK, maxWidth: 110, maxLines: 1, lineHeight: 9,
-  });
-  drawWrappedText(page, data.department?.trim() ?? "", {
-    x: 166, y: 485, font: regularFont, size: 8, color: INK, maxWidth: 168, maxLines: 1, lineHeight: 9,
   });
   drawWrappedText(page, data.telephone?.trim() ?? "", {
     x: 434, y: 485, font: regularFont, size: 8, color: INK, maxWidth: 108, maxLines: 1, lineHeight: 9,
   });
-  drawWrappedText(page, data.location?.trim() ?? "", {
-    x: 166, y: 450, font: regularFont, size: 8, color: INK, maxWidth: 168, maxLines: 1, lineHeight: 9,
-  });
   if (data.urgent) {
     page.drawText("URGENT", { x: 435, y: 450, font: boldFont, size: 8, color: INK });
   }
-  drawWrappedText(page, data.approvedBy?.trim() ?? "", {
-    x: 130, y: 280, font: regularFont, size: 8, color: INK, maxWidth: 136, maxLines: 1, lineHeight: 9,
-  });
-  drawWrappedText(page, data.authorizedBy?.trim() ?? "", {
-    x: 412, y: 280, font: regularFont, size: 8, color: INK, maxWidth: 156, maxLines: 1, lineHeight: 9,
-  });
 
   const lines = workOrderItemLines(data.items, regularFont);
   const total = data.items.reduce((sum, item) => sum + Number(item.quantity) * Number(item.unitCost), 0);
   if (!Number.isSafeInteger(total)) throw new Error("The work-order total is too large.");
-  const linesOnFirstPage = 7;
+  const linesOnFirstPage = 8;
   drawWorkOrderLines(page, lines, 423, regularFont, linesOnFirstPage);
   page.drawText(`Total = ${formatRwf(total)}`, {
     x: 151,
@@ -384,7 +359,7 @@ export async function fillWorkOrderPdf(templateBytes, data) {
       size: 14,
       color: INK,
     });
-    continuationPage.drawText(`Requester: ${printableText(data.requester.trim())}    Date: ${dateText}`, {
+    continuationPage.drawText(`Date: ${dateText}`, {
       x: 56,
       y: 725,
       font: regularFont,

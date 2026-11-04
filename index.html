@@ -159,27 +159,15 @@
     <form id="work-order-form" novalidate>
       <p class="eyebrow">KOZO RESTAURANT</p>
       <h2 id="work-order-title">Work order request</h2>
-      <p class="work-order-intro">Describe the work and add requested materials. The total is calculated automatically.</p>
+      <p class="work-order-intro">Only the date, telephone, urgency, and requested items are updated. The other printed details stay as they appear on the form.</p>
       <div class="work-order-fields">
-        <label class="field">
-          <span>Requester name <span class="required">*</span></span>
-          <input id="work-order-requester" name="requester" maxlength="90" autocomplete="name" required>
-        </label>
         <label class="field">
           <span>Date</span>
           <input id="work-order-date" name="date" type="date" readonly required>
         </label>
         <label class="field">
-          <span>Department</span>
-          <input id="work-order-department" name="department" maxlength="80">
-        </label>
-        <label class="field">
           <span>Telephone</span>
-          <input id="work-order-telephone" name="telephone" type="tel" maxlength="40" autocomplete="tel">
-        </label>
-        <label class="field">
-          <span>Location</span>
-          <input id="work-order-location" name="location" maxlength="100">
+          <input id="work-order-telephone" name="telephone" type="tel" maxlength="24" autocomplete="tel">
         </label>
         <label class="work-order-urgent">
           <input id="work-order-urgent" name="urgent" type="checkbox">
@@ -199,17 +187,6 @@
         <p class="work-order-total">Total <strong id="work-order-total">0 RWF</strong></p>
       </section>
 
-      <div class="work-order-fields approval-fields">
-        <label class="field">
-          <span>Approved by</span>
-          <input id="work-order-approved" name="approvedBy" maxlength="90">
-        </label>
-        <label class="field">
-          <span>Authorized by</span>
-          <input id="work-order-authorized" name="authorizedBy" maxlength="90">
-        </label>
-      </div>
-      <p class="work-order-maintenance-note">Maintenance-use completion fields will remain blank for the maintenance team.</p>
       <p class="form-message" id="work-order-message" role="status" aria-live="polite"></p>
       <div class="dialog-actions work-order-actions">
         <button class="button button-secondary" id="close-work-order" type="button">Cancel</button>

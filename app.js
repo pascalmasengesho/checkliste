@@ -628,14 +628,9 @@ function getWorkOrderData() {
     unitCost: Number(row.querySelector('[name="unitCost"]').value),
   }));
   return {
-    requester: document.getElementById("work-order-requester").value.trim(),
     date: document.getElementById("work-order-date").value,
-    department: document.getElementById("work-order-department").value,
     telephone: document.getElementById("work-order-telephone").value,
-    location: document.getElementById("work-order-location").value,
     urgent: document.getElementById("work-order-urgent").checked,
-    approvedBy: document.getElementById("work-order-approved").value,
-    authorizedBy: document.getElementById("work-order-authorized").value,
     items,
   };
 }
@@ -645,11 +640,8 @@ async function downloadWorkOrder(event) {
   workOrderMessage.textContent = "";
   workOrderMessage.classList.remove("success");
   const data = getWorkOrderData();
-  if (!data.requester) {
-    document.getElementById("work-order-requester").focus();
-    workOrderMessage.textContent = "Enter the requester name.";
-    return;
-  }
+  data.date = todayIso();
+  document.getElementById("work-order-date").value = data.date;
   const invalidItem = data.items.findIndex((item) => (
     !item.description
     || !Number.isSafeInteger(item.quantity)
@@ -816,14 +808,12 @@ document.getElementById("confirm-reset").addEventListener("click", (event) => {
   clearChecklist();
 });
 document.getElementById("open-work-order").addEventListener("click", () => {
-  const requester = document.getElementById("work-order-requester");
-  if (!requester.value.trim()) requester.value = personnelInput.value.trim();
   document.getElementById("work-order-date").value = todayIso();
   workOrderMessage.textContent = "";
   workOrderMessage.classList.remove("success");
   if (!workOrderItemsRoot.children.length) addWorkOrderItem();
   workOrderDialog.showModal();
-  requester.focus();
+  document.getElementById("work-order-telephone").focus();
 });
 document.getElementById("close-work-order").addEventListener("click", () => workOrderDialog.close());
 document.getElementById("add-work-order-item").addEventListener("click", addWorkOrderItem);
