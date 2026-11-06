@@ -382,15 +382,23 @@ export async function fillWorkOrderPdf(templateBytes, data) {
 
   const itemsHeading = printableText(data.itemsHeading ?? "").trim();
   if (itemsHeading) {
+    const headingSize = 10;
     drawWrappedText(page, itemsHeading, {
       x: 143,
       y: 418,
       font: boldFont,
-      size: 9,
+      size: headingSize,
       color: WORK_ORDER_INK,
       maxWidth: 412,
       maxLines: 1,
       lineHeight: 10,
+    });
+    const headingWidth = Math.min(boldFont.widthOfTextAtSize(itemsHeading, headingSize), 412);
+    page.drawLine({
+      start: { x: 143, y: 416 },
+      end: { x: 143 + headingWidth, y: 416 },
+      thickness: 0.6,
+      color: WORK_ORDER_INK,
     });
   }
   const linesOnFirstPage = 5;

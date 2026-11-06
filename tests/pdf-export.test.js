@@ -161,7 +161,7 @@ test("prints the user-provided items heading in bold", async () => {
   const filled = await PDFDocument.load(result);
   const content = getPageContent(filled.getPage(0), filled);
   assert.ok(content.includes(Buffer.from("POND LIGHT REPLACEMENT").toString("hex").toUpperCase()));
-  assert.match(content, /\/Helvetica-Bold-[^\s]+ 9 Tf[\s\S]*<504F4E44204C49474854205245504C4143454D454E54> Tj/);
+  assert.match(content, /\/Helvetica-Bold-[^\s]+ 10 Tf[\s\S]*<504F4E44204C49474854205245504C4143454D454E54> Tj/);
 });
 
 test("marks urgent requests and places overflowing details on continuation pages", async () => {
