@@ -676,10 +676,14 @@ async function downloadWorkOrder(event) {
     const url = URL.createObjectURL(pdf);
     const download = document.createElement("a");
     download.href = url;
-    download.download = `Work-Order-${data.date}.pdf`;
+    const now = new Date();
+    const time = [now.getHours(), now.getMinutes(), now.getSeconds()]
+      .map((part) => String(part).padStart(2, "0"))
+      .join("");
+    download.download = `Work-Order-${data.date}-${time}.pdf`;
     download.click();
     window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
-    workOrderMessage.textContent = "Your work-order PDF has been downloaded.";
+    workOrderMessage.textContent = `Downloaded ${download.download}: ${data.items.length} item${data.items.length === 1 ? "" : "s"}, total ${formatRwf(total)}. Open the newest file in Downloads.`;
     workOrderMessage.classList.add("success");
   } catch (error) {
     console.error("Unable to generate the work-order PDF.", error);
@@ -869,8 +873,22 @@ window.addEventListener("load", async () => {
     return;
   }
 
+  const hadController = Boolean(navigator.serviceWorker.controller);
+  if (hadController) {
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      window.location.reload();
+    }, { once: true });
+  }
+
   try {
-    await navigator.serviceWorker.register("./service-worker.js");
+    const registration = await navigator.serviceWorker.register("./service-worker.js", {
+      updateViaCache: "none",
+    });
+    try {
+      await registration.update();
+    } catch (error) {
+      console.warn("Could not check for a checklist update. The current version will remain available.", error);
+    }
   } catch (error) {
     console.error("Could not register the checklist service worker.", error);
     formMessage.textContent = "Offline support could not be enabled. You can still use the checklist online.";
