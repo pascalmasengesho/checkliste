@@ -145,6 +145,7 @@ test("updates only the date, telephone, urgency, request items, and total", asyn
   assert.ok(content.includes(Buffer.from("* 2 Replace pond lights. 55000rwf/each").toString("hex").toUpperCase()));
   assert.ok(content.includes(Buffer.from("REQUESTED ITEMS").toString("hex").toUpperCase()));
   assert.ok(content.includes(Buffer.from("Total = 110,000 rwf").toString("hex").toUpperCase()));
+  assert.match(content, /\/Helvetica-Bold-[^\s]+ 8 Tf[\s\S]*<546F74616C203D203131302C30303020727766> Tj/);
   assert.match(content, /0 0 0 rg/);
   assert.ok(!content.includes(Buffer.from("URGENT").toString("hex").toUpperCase()));
   assert.ok(content.includes(originalContent), "the original printed form and unchanged details are retained");

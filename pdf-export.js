@@ -392,7 +392,7 @@ export async function fillWorkOrderPdf(templateBytes, data) {
   page.drawText(`Total = ${formatWorkOrderTotal(total)}`, {
     x: 143,
     y: 335,
-    font: regularFont,
+    font: boldFont,
     size: 8,
     color: WORK_ORDER_INK,
   });
