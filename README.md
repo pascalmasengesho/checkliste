@@ -20,7 +20,7 @@ The shared equipment history uses Supabase. It is unavailable until the project 
 
 1. Create a Supabase project at [supabase.com/dashboard](https://supabase.com/dashboard) and save its database password privately.
 2. In **Project Settings → API**, copy the **Project URL** and the **public anon/publishable key**. Never use or publish the `service_role` or secret key in this website.
-3. In **SQL Editor**, run the contents of [`supabase/schema.sql`](./supabase/schema.sql). This creates an append-only service log, stamps each record with the authenticated staff account, and restricts reads and writes to authenticated users through row-level security.
+3. In **SQL Editor**, run the contents of [`supabase/schema.sql`](./supabase/schema.sql). Run it again when updating an existing project to apply schema changes. It creates an append-only service log, stamps each record with the authenticated staff account, and restricts access through row-level security.
 4. In **Authentication → Providers → Email**, enable email sign-in. In **Authentication → URL Configuration**, add the deployed GitHub Pages URL (and the local app URL if needed) to the allowed redirect URLs. Disable public sign-ups.
 5. In **Authentication → Users**, invite each staff member by email. In **SQL Editor**, add each invited address to the private staff allowlist, replacing the example email:
 
@@ -31,6 +31,15 @@ The shared equipment history uses Supabase. It is unavailable until the project 
    ```
 
    The database checks this allowlist as well as authentication, so another signed-in account cannot read or write the service history.
+   To grant checklist admin access, the project owner can promote an already invited staff email in SQL Editor:
+
+   ```sql
+   insert into public.maintenance_service_staff (email, role)
+   values (lower('admin@example.com'), 'admin')
+   on conflict (email) do update set role = 'admin';
+   ```
+
+   Checklist admins can add or remove staff allowlist entries in the app. The project owner must still send Supabase invitations; admins cannot promote other staff to admin. Service records remain immutable, including when a staff member's access is removed.
 6. Put the Project URL and public anon/publishable key in `window.MAINTENANCE_SUPABASE_CONFIG` near the top of `index.html`, replacing the empty strings. The public key is designed for browser use; the database policies, not secrecy of this key, protect staff records.
 7. Build and deploy the site. Staff sign in with their invited email, then use **Equipment service & reminders** to record work or schedule the next service. Alerts appear on the checklist when an equipment item is overdue, due today, or due in the next 7 days.
 

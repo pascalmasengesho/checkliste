@@ -62,6 +62,12 @@ export function initializeServiceHistory() {
   const accountPanel = document.getElementById("service-account");
   const userEmail = document.getElementById("service-user-email");
   const signOutButton = document.getElementById("service-sign-out");
+  const adminPanel = document.getElementById("service-admin-section");
+  const adminForm = document.getElementById("service-admin-form");
+  const adminEmailInput = document.getElementById("service-admin-email");
+  const adminAddButton = document.getElementById("service-admin-add");
+  const adminMessage = document.getElementById("service-admin-message");
+  const staffList = document.getElementById("service-admin-staff-list");
   const recordForm = document.getElementById("service-record-form");
   const equipmentInput = document.getElementById("service-equipment");
   const actionInput = document.getElementById("service-action");
@@ -151,6 +157,29 @@ export function initializeServiceHistory() {
     }
   });
 
+  adminForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (!adminForm.reportValidity()) return;
+
+    adminAddButton.disabled = true;
+    setMessage(adminMessage, "Adding staff access…");
+    try {
+      const { error } = await supabase.rpc("add_maintenance_service_staff", {
+        p_email: adminEmailInput.value.trim().toLowerCase(),
+      });
+      if (error) throw error;
+
+      adminForm.reset();
+      setMessage(adminMessage, "Checklist access added. The project owner must still send the Supabase invitation.", true);
+      await refreshStaffList();
+    } catch (error) {
+      console.error("Could not add checklist staff access.", error);
+      setMessage(adminMessage, error instanceof Error ? error.message : "Could not add staff access. Try again.");
+    } finally {
+      adminAddButton.disabled = false;
+    }
+  });
+
   recordForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     if (!recordForm.reportValidity()) return;
@@ -233,6 +262,60 @@ export function initializeServiceHistory() {
     }
   }
 
+  async function refreshStaffList() {
+    staffList.replaceChildren(createTextElement("p", "service-empty", "Loading staff access…"));
+    try {
+      const { data, error } = await supabase.rpc("list_maintenance_service_staff");
+      if (error) throw error;
+      renderStaffList(data);
+    } catch (error) {
+      console.error("Could not load checklist staff access.", error);
+      staffList.replaceChildren(createTextElement("p", "service-error", "Could not load staff access. Try again later."));
+      throw error;
+    }
+  }
+
+  function renderStaffList(staff) {
+    if (!staff.length) {
+      staffList.replaceChildren(createTextElement("p", "service-empty", "No staff access is configured."));
+      return;
+    }
+
+    const fragment = document.createDocumentFragment();
+    for (const member of staff) {
+      const item = document.createElement("div");
+      item.className = "service-admin-staff";
+      item.append(
+        createTextElement("span", "service-admin-email", member.email),
+        createTextElement("span", "service-admin-role", member.role === "admin" ? "Admin" : "Staff"),
+      );
+      if (member.role !== "admin") {
+        const removeButton = createTextElement("button", "button button-secondary", "Remove access");
+        removeButton.type = "button";
+        removeButton.addEventListener("click", async () => {
+          if (!window.confirm(`Remove checklist access for ${member.email}? Existing service records will remain.`)) return;
+          removeButton.disabled = true;
+          setMessage(adminMessage, `Removing access for ${member.email}…`);
+          try {
+            const { error } = await supabase.rpc("remove_maintenance_service_staff", {
+              p_email: member.email,
+            });
+            if (error) throw error;
+            setMessage(adminMessage, `Checklist access removed for ${member.email}.`, true);
+            await refreshStaffList();
+          } catch (error) {
+            console.error("Could not remove checklist staff access.", error);
+            setMessage(adminMessage, error instanceof Error ? error.message : "Could not remove staff access. Try again.");
+            removeButton.disabled = false;
+          }
+        });
+        item.append(removeButton);
+      }
+      fragment.append(item);
+    }
+    staffList.replaceChildren(fragment);
+  }
+
   function renderHistory(records) {
     if (!records.length) {
       historyList.replaceChildren(createTextElement("p", "service-empty", "No service records yet. Add the first completed job or service schedule."));
@@ -293,6 +376,7 @@ export function initializeServiceHistory() {
     reminderSummary.hidden = !signedIn;
 
     if (!signedIn) {
+      adminPanel.hidden = true;
       authStatus.textContent = "Sign in with an invited staff account to access shared service records.";
       historyList.replaceChildren(createTextElement("p", "service-empty", "Sign in to view the shared service history."));
       return;
@@ -302,6 +386,21 @@ export function initializeServiceHistory() {
     authStatus.textContent = `Signed in as ${session.user.email || "staff"}. Service reminders are shown below.`;
     eventDateInput.value = todayIso();
     historyList.replaceChildren(createTextElement("p", "service-empty", "Loading shared service history…"));
+    adminPanel.hidden = true;
+    try {
+      const { data: isAdmin, error } = await supabase.rpc("is_maintenance_service_admin");
+      if (error) throw error;
+      if (version !== sessionVersion) return;
+      if (isAdmin) {
+        adminPanel.hidden = false;
+        await refreshStaffList();
+      }
+    } catch (error) {
+      if (version !== sessionVersion) return;
+      console.error("Could not check checklist admin access.", error);
+      setMessage(configMessage, "Could not check admin access. Verify that the latest Supabase schema has been applied.");
+    }
+    if (version !== sessionVersion) return;
     try {
       const records = await loadHistory();
       if (version !== sessionVersion) return;

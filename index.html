@@ -240,6 +240,19 @@
           <p>Signed in as <strong id="service-user-email"></strong></p>
           <button class="button button-secondary" id="service-sign-out" type="button">Sign out</button>
         </div>
+        <section class="service-admin-section" id="service-admin-section" aria-labelledby="service-admin-title" hidden>
+          <h3 id="service-admin-title">Admin: manage staff access</h3>
+          <p class="service-help">Adding an email grants checklist access only. The project owner must still invite that person in Supabase before they can sign in. Service records remain immutable.</p>
+          <form class="service-admin-form" id="service-admin-form" novalidate>
+            <label class="field" for="service-admin-email">
+              <span>Staff email</span>
+              <input id="service-admin-email" name="email" type="email" maxlength="254" autocomplete="off" required>
+            </label>
+            <button class="button button-primary" id="service-admin-add" type="submit">Add staff access</button>
+          </form>
+          <p class="form-message" id="service-admin-message" role="status" aria-live="polite"></p>
+          <div class="service-admin-staff-list" id="service-admin-staff-list" aria-live="polite"></div>
+        </section>
         <form class="service-record-form" id="service-record-form" novalidate>
           <h3>Record work or schedule service</h3>
           <label class="field">
