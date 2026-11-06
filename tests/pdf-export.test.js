@@ -132,6 +132,7 @@ test("updates only the date, telephone, urgency, request items, and total", asyn
     date: "2026-11-04",
     telephone: "0781234567",
     urgent: false,
+    itemsHeading: "REQUESTED ITEMS",
     items: [{ description: "Replace pond lights", quantity: 2, unitCost: 55000 }],
   });
   const filled = await PDFDocument.load(result);
@@ -149,6 +150,18 @@ test("updates only the date, telephone, urgency, request items, and total", asyn
   assert.match(content, /0 0 0 rg/);
   assert.ok(!content.includes(Buffer.from("URGENT").toString("hex").toUpperCase()));
   assert.ok(content.includes(originalContent), "the original printed form and unchanged details are retained");
+});
+
+test("prints the user-provided items heading in bold", async () => {
+  const result = await fillWorkOrderPdf(workOrderTemplate, {
+    date: "2026-11-04",
+    itemsHeading: "POND LIGHT REPLACEMENT",
+    items: [{ description: "LED pond lights", quantity: 2, unitCost: 55000 }],
+  });
+  const filled = await PDFDocument.load(result);
+  const content = getPageContent(filled.getPage(0), filled);
+  assert.ok(content.includes(Buffer.from("POND LIGHT REPLACEMENT").toString("hex").toUpperCase()));
+  assert.match(content, /\/Helvetica-Bold-[^\s]+ 9 Tf[\s\S]*<504F4E44204C49474854205245504C4143454D454E54> Tj/);
 });
 
 test("marks urgent requests and places overflowing details on continuation pages", async () => {

@@ -631,6 +631,7 @@ function getWorkOrderData() {
     date: document.getElementById("work-order-date").value,
     telephone: document.getElementById("work-order-telephone").value,
     urgent: document.getElementById("work-order-urgent").checked,
+    itemsHeading: document.getElementById("work-order-items-heading").value.trim(),
     items,
   };
 }

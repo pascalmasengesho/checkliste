@@ -380,13 +380,19 @@ export async function fillWorkOrderPdf(templateBytes, data) {
   const total = data.items.reduce((sum, item) => sum + Number(item.quantity) * Number(item.unitCost), 0);
   if (!Number.isSafeInteger(total)) throw new Error("The work-order total is too large.");
 
-  page.drawText("REQUESTED ITEMS", {
-    x: 143,
-    y: 418,
-    font: boldFont,
-    size: 9,
-    color: WORK_ORDER_INK,
-  });
+  const itemsHeading = printableText(data.itemsHeading ?? "").trim();
+  if (itemsHeading) {
+    drawWrappedText(page, itemsHeading, {
+      x: 143,
+      y: 418,
+      font: boldFont,
+      size: 9,
+      color: WORK_ORDER_INK,
+      maxWidth: 412,
+      maxLines: 1,
+      lineHeight: 10,
+    });
+  }
   const linesOnFirstPage = 5;
   drawWorkOrderLines(page, lines, 401, regularFont, linesOnFirstPage);
   page.drawText(`Total = ${formatWorkOrderTotal(total)}`, {
