@@ -1,3 +1,6 @@
+import { initializeServiceHistory } from "./service-history.js";
+import { todayIso } from "./date-utils.js";
+
 "use strict";
 
 const STORAGE_KEY = "kigali-maintenance-checklist-v2";
@@ -73,11 +76,6 @@ signatureContext.strokeStyle = "#285e49";
 signatureContext.lineWidth = 4.5;
 signatureContext.lineCap = "round";
 signatureContext.lineJoin = "round";
-
-function todayIso() {
-  const today = new Date();
-  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-}
 
 function createChecklist() {
   const groups = new Map();
@@ -831,6 +829,7 @@ workOrderItemsRoot.addEventListener("click", (event) => {
   }
 });
 workOrderForm.addEventListener("submit", downloadWorkOrder);
+initializeServiceHistory();
 
 window.addEventListener("storage", (event) => {
   if (event.key === STORAGE_KEY && event.newValue) {

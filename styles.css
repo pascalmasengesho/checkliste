@@ -127,7 +127,27 @@ button { -webkit-tap-highlight-color: transparent; }
 .report-link svg { width: 16px; height: 16px; }
 .report-link:hover { border-color: #9cbea8; background: #fafcfb; }
 .report-link:focus-visible { outline: 3px solid rgb(25 116 86 / 25%); outline-offset: 2px; }
-.work-order-open { margin-left: 8px; cursor: pointer; font-family: inherit; }
+.work-order-open, .service-open { margin-left: 8px; cursor: pointer; font-family: inherit; }
+
+.service-access-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  margin-bottom: 15px;
+  padding: 21px 24px;
+  border: 1px solid #e3ebe4;
+  border-radius: 12px;
+  background: #fff;
+}
+.service-access-card h2 { margin-bottom: 5px; font-size: 17px; }
+.service-access-card .eyebrow { margin-bottom: 7px; }
+.service-access-copy { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.service-reminder-summary { padding: 11px 13px; border: 1px solid #dce9df; border-radius: 8px; background: #f4faf5; color: #355b42; font-size: 12px; line-height: 1.55; }
+.service-reminder-summary.has-overdue { border-color: #efcfca; background: var(--red-pale); color: #7d332e; }
+.service-reminder-summary ul { margin: 6px 0 0; padding-left: 19px; }
+.service-reminder-summary li + li { margin-top: 3px; }
+.reminder-overdue { color: var(--red); }
+.reminder-upcoming { color: #7a590e; }
 
 .eyebrow {
   margin: 0 0 10px;
@@ -431,6 +451,35 @@ h2 { margin-bottom: 0; font-size: 20px; line-height: 1.3; font-weight: 700; }
   overflow: auto;
   padding: 24px;
 }
+.service-dialog {
+  width: min(680px, calc(100% - 24px));
+  max-height: calc(100dvh - 24px);
+  overflow: auto;
+  padding: 24px;
+}
+.service-dialog h2 { margin-bottom: 7px; }
+.service-intro, .service-help { color: var(--muted); font-size: 12px; line-height: 1.5; }
+.service-auth-form .field { margin: 15px 0 8px; }
+.service-auth-form .field input, .service-record-form .field input, .service-record-form .field select { min-height: 42px; padding: 0 11px; }
+.service-help { margin: 8px 0 0; font-size: 11px; }
+.service-account-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 13px 0 21px; padding: 10px 12px; border-radius: 8px; background: var(--green-pale); color: var(--green-dark); font-size: 12px; }
+.service-account-heading p { margin: 0; overflow-wrap: anywhere; }
+.service-account-heading .button { min-height: 34px; padding: 0 10px; font-size: 11px; }
+.service-record-form { padding: 17px; border: 1px solid #edf0ed; border-radius: 10px; }
+.service-record-form h3, .service-history-section h3 { margin: 0 0 13px; font-size: 15px; }
+.service-record-form > .field { margin-bottom: 12px; }
+.service-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.service-record-form textarea { min-height: 78px; padding: 10px 11px; resize: vertical; }
+.service-record-form .dialog-actions { margin-top: 12px; }
+.service-history-section { margin-top: 22px; }
+.service-history-list { display: grid; gap: 9px; }
+.service-history-record { padding: 13px; border: 1px solid #e8ede8; border-radius: 9px; background: #fcfdfc; }
+.service-record-title { margin: 0 0 6px; font-size: 13px; }
+.service-record-details { margin: 0 0 7px; color: #46534b; font-size: 12px; line-height: 1.55; overflow-wrap: anywhere; white-space: pre-wrap; }
+.service-record-meta, .service-record-due, .service-empty, .service-error { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.5; overflow-wrap: anywhere; }
+.service-record-due { margin-top: 4px; color: var(--green-dark); font-weight: 650; }
+.service-error { color: var(--red); }
+.service-dialog [hidden], .service-access-card [hidden] { display: none !important; }
 .work-order-dialog h2 { margin-bottom: 7px; }
 .work-order-intro { color: var(--muted); font-size: 12px; line-height: 1.5; }
 .work-order-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px 15px; }
@@ -471,7 +520,8 @@ h2 { margin-bottom: 0; font-size: 20px; line-height: 1.3; font-weight: 700; }
   .install-app { min-height: 32px; padding: 0 8px; font-size: 10px; }
   .report-link { min-height: 36px; gap: 6px; margin-top: 8px; padding: 0 10px; font-size: 11px; }
   .report-link svg { width: 14px; height: 14px; }
-  .work-order-open { margin-left: 4px; }
+  .work-order-open, .service-open { margin-left: 4px; }
+  .service-access-card { padding: 18px 17px; }
   .brand { gap: 8px; }
   .brand-mark { width: 27px; height: 27px; font-size: 14px; }
   .brand-name { font-size: 10px; }
@@ -498,6 +548,9 @@ h2 { margin-bottom: 0; font-size: 20px; line-height: 1.3; font-weight: 700; }
   .footer-actions .button { width: 100%; }
   .dialog-actions { align-items: stretch; flex-direction: column-reverse; }
   .work-order-dialog { padding: 18px; }
+  .service-dialog { padding: 18px; }
+  .service-form-grid { grid-template-columns: 1fr; gap: 10px; }
+  .service-account-heading { align-items: flex-start; }
   .work-order-fields { grid-template-columns: 1fr; gap: 11px; }
   .work-order-item { grid-template-columns: minmax(0, 1fr) 66px 88px; gap: 7px; }
   .work-order-item .item-description { grid-column: 1 / -1; }

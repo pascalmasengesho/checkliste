@@ -6,7 +6,7 @@ const APP_FILES = [
   "./index.html",
   "./manifest.webmanifest",
   "./styles.css?v=__STYLES_VERSION__",
-  "./app.js?v=__APP_VERSION__",
+  "./vendor/checklist-app.js?v=__APP_VERSION__",
   "./vendor/checklist-pdf.js?v=__PDF_VERSION__",
   "./template.pdf",
   "./assets/work-order-template.pdf",

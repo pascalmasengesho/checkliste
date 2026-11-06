@@ -12,7 +12,13 @@
   <link rel="apple-touch-icon" href="./assets/icon-180.png">
   <link rel="stylesheet" href="./styles.css">
   <script src="./vendor/checklist-pdf.js"></script>
-  <script src="./app.js" defer></script>
+  <script>
+    window.MAINTENANCE_SUPABASE_CONFIG = {
+      url: "https://tqcbizssywdmuqjpcpnq.supabase.co",
+      anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRxY2JpenNzeXdkbXVxanBjcG5xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM5OTU0NjQsImV4cCI6MjEwOTU3MTQ2NH0.ZF1fNGQtvYSfwibtO3wlQqXLCFf94ema0bFACOM0gog",
+    };
+  </script>
+  <script src="./vendor/checklist-app.js" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -36,6 +42,16 @@
         Open report
       </a>
       <button class="report-link work-order-open" id="open-work-order" type="button">Create work order</button>
+      <button class="report-link service-open" id="open-service-history" type="button">Equipment service &amp; reminders</button>
+    </section>
+
+    <section class="service-access-card" aria-labelledby="service-access-title">
+      <div>
+        <p class="eyebrow">SHARED SERVICE LOG</p>
+        <h2 id="service-access-title">Service history and reminders</h2>
+        <p class="service-access-copy" id="service-auth-status">Sign in with an invited staff account to access shared service records.</p>
+      </div>
+      <div class="service-reminder-summary" id="service-reminder-summary" role="status" aria-live="polite" hidden></div>
     </section>
 
     <form id="checklist-form" novalidate>
@@ -197,6 +213,73 @@
         <button class="button button-primary" type="submit">Download work-order PDF</button>
       </div>
     </form>
+  </dialog>
+
+  <dialog class="confirm-dialog service-dialog" id="service-dialog" aria-labelledby="service-title">
+    <div>
+      <p class="eyebrow">SHARED STAFF RECORDS</p>
+      <h2 id="service-title">Equipment service log</h2>
+      <p class="service-intro">Sign in to view the shared history, record completed work, schedule service, and see upcoming reminders.</p>
+      <p class="form-message" id="service-config-message" role="alert"></p>
+
+      <form class="service-auth-form" id="service-auth-form" novalidate>
+        <label class="field" for="service-email">
+          <span>Invited staff email</span>
+          <input id="service-email" name="email" type="email" maxlength="254" autocomplete="email" required>
+        </label>
+        <p class="service-help">A secure sign-in link will be sent by email. Only staff invited by the project owner can sign in.</p>
+        <p class="form-message" id="service-auth-message" role="status" aria-live="polite"></p>
+        <div class="dialog-actions">
+          <button class="button button-secondary" id="close-service-dialog" type="button">Close</button>
+          <button class="button button-primary" id="send-service-link" type="submit">Email sign-in link</button>
+        </div>
+      </form>
+
+      <section class="service-account" id="service-account" hidden>
+        <div class="service-account-heading">
+          <p>Signed in as <strong id="service-user-email"></strong></p>
+          <button class="button button-secondary" id="service-sign-out" type="button">Sign out</button>
+        </div>
+        <form class="service-record-form" id="service-record-form" novalidate>
+          <h3>Record work or schedule service</h3>
+          <label class="field">
+            <span>Equipment or tool <span class="required">*</span></span>
+            <input id="service-equipment" name="equipment" type="text" maxlength="120" required>
+          </label>
+          <div class="service-form-grid">
+            <label class="field">
+              <span>Record type</span>
+              <select id="service-action" name="action">
+                <option value="serviced">Serviced</option>
+                <option value="repaired">Repaired / fixed</option>
+                <option value="scheduled">Scheduled service</option>
+              </select>
+            </label>
+            <label class="field">
+              <span id="service-event-date-label">Date completed</span>
+              <input id="service-event-date" name="eventDate" type="date" required>
+            </label>
+          </div>
+          <label class="field">
+            <span>Work details <span class="required">*</span></span>
+            <textarea id="service-details" name="details" rows="3" maxlength="2000" required placeholder="Describe the service, repair, or planned work."></textarea>
+          </label>
+          <label class="field">
+            <span>Next service due (optional)</span>
+            <input id="service-next-date" name="nextServiceDate" type="date">
+          </label>
+          <p class="service-help">Your signed-in account is recorded automatically. A new record becomes the latest schedule for this equipment.</p>
+          <p class="form-message" id="service-record-message" role="status" aria-live="polite"></p>
+          <div class="dialog-actions">
+            <button class="button button-primary" id="save-service-record" type="submit">Save service record</button>
+          </div>
+        </form>
+        <section class="service-history-section" aria-labelledby="service-history-title">
+          <h3 id="service-history-title">Shared history</h3>
+          <div class="service-history-list" id="service-history-list" aria-live="polite"></div>
+        </section>
+      </section>
+    </div>
   </dialog>
 </body>
 </html>

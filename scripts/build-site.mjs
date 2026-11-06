@@ -25,13 +25,13 @@ await cp(
 for (const file of ["icon-180.png", "icon-192.png", "icon-512.png"]) {
   await cp(path.join(root, "assets", file), path.join(output, "assets", file));
 }
-for (const file of ["checklist-pdf.js", "pdf-lib.LICENSE"]) {
+for (const file of ["checklist-app.js", "checklist-pdf.js", "pdf-lib.LICENSE"]) {
   await cp(path.join(root, "vendor", file), path.join(output, "vendor", file));
 }
 const indexPath = path.join(output, "index.html");
 let html = await readFile(indexPath, "utf8");
 const assetVersions = new Map();
-for (const file of ["styles.css", "app.js", "vendor/checklist-pdf.js"]) {
+for (const file of ["styles.css", "vendor/checklist-app.js", "vendor/checklist-pdf.js"]) {
   const contents = await readFile(path.join(output, file));
   const version = createHash("sha256").update(contents).digest("hex").slice(0, 12);
   assetVersions.set(file, version);
@@ -41,7 +41,7 @@ await writeFile(indexPath, html);
 const buildFiles = [
   "index.html",
   "styles.css",
-  "app.js",
+  "vendor/checklist-app.js",
   "manifest.webmanifest",
   "template.pdf",
   "assets/work-order-template.pdf",
@@ -58,7 +58,7 @@ let worker = await readFile(workerPath, "utf8");
 worker = worker.replace("__BUILD_ID__", buildId);
 for (const [placeholder, file] of [
   ["__STYLES_VERSION__", "styles.css"],
-  ["__APP_VERSION__", "app.js"],
+  ["__APP_VERSION__", "vendor/checklist-app.js"],
   ["__PDF_VERSION__", "vendor/checklist-pdf.js"],
 ]) {
   worker = worker.replaceAll(placeholder, assetVersions.get(file));

@@ -4,11 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build:browser": "esbuild pdf-export.js --bundle --minify --format=iife --global-name=ChecklistPdf --outfile=vendor/checklist-pdf.js",
+    "build:browser": "esbuild pdf-export.js --bundle --minify --format=iife --global-name=ChecklistPdf --outfile=vendor/checklist-pdf.js && esbuild app.js --bundle --minify --format=iife --outfile=vendor/checklist-app.js",
     "build:site": "node scripts/build-site.mjs",
     "test": "node --test"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.119.0",
     "pdf-lib": "1.17.1"
   },
   "devDependencies": {
