@@ -13,6 +13,7 @@ const ROWS = [
 ];
 
 const INK = rgb(33 / 255, 75 / 255, 57 / 255);
+const WORK_ORDER_INK = rgb(0, 0, 0);
 const DUTY_NAME = { x: 177, y: 565.5, maxWidth: 98 };
 const SIGNATURE_BOX = { x: 458, y: 553.5, width: 96, height: 24 };
 const AUTOMATIC_SIGNATURE_NAMES = new Set(["masengesho pascal", "mwumvaneza fabrice"]);
@@ -290,8 +291,16 @@ function drawWorkOrderLines(page, lines, startY, font, maxLines) {
       y: startY - index * 13,
       font,
       size: 8,
-      color: INK,
+      color: WORK_ORDER_INK,
     });
+  });
+}
+
+function drawWorkOrderFieldBorder(page, bounds) {
+  page.drawRectangle({
+    ...bounds,
+    borderColor: WORK_ORDER_INK,
+    borderWidth: 0.8,
   });
 }
 
@@ -312,24 +321,24 @@ export async function fillWorkOrderPdf(templateBytes, data) {
   ]);
 
   page.drawRectangle({
-    x: 432,
-    y: 518,
-    width: 113,
-    height: 22,
+    x: 432.5,
+    y: 510,
+    width: 113.4,
+    height: 24.4,
     color: rgb(1, 1, 1),
   });
   page.drawRectangle({
-    x: 432,
-    y: 485,
-    width: 112,
-    height: 22,
+    x: 431.6,
+    y: 478.2,
+    width: 114,
+    height: 23.5,
     color: rgb(1, 1, 1),
   });
   page.drawRectangle({
-    x: 432,
-    y: 450,
-    width: 112,
-    height: 22,
+    x: 431.5,
+    y: 448.3,
+    width: 114.3,
+    height: 23.3,
     color: rgb(1, 1, 1),
   });
   page.drawRectangle({
@@ -339,13 +348,16 @@ export async function fillWorkOrderPdf(templateBytes, data) {
     height: 115.3,
     color: rgb(1, 1, 1),
   });
+  drawWorkOrderFieldBorder(page, { x: 431.75, y: 509.25, width: 114.95, height: 26.15 });
+  drawWorkOrderFieldBorder(page, { x: 430.85, y: 477.85, width: 115.5, height: 24.6 });
+  drawWorkOrderFieldBorder(page, { x: 430.65, y: 447.7, width: 116.1, height: 24.8 });
 
   drawWrappedText(page, dateText, {
     x: 435,
     y: 520,
     font: regularFont,
     size: 8,
-    color: INK,
+    color: WORK_ORDER_INK,
     maxWidth: 105,
     maxLines: 1,
     lineHeight: 9,
@@ -355,27 +367,34 @@ export async function fillWorkOrderPdf(templateBytes, data) {
     y: 488,
     font: regularFont,
     size: 8,
-    color: INK,
+    color: WORK_ORDER_INK,
     maxWidth: 104,
     maxLines: 1,
     lineHeight: 9,
   });
   if (data.urgent) {
-    page.drawText("URGENT", { x: 435, y: 455, font: boldFont, size: 8, color: INK });
+    page.drawText("URGENT", { x: 435, y: 455, font: boldFont, size: 8, color: WORK_ORDER_INK });
   }
 
   const lines = getWorkOrderLines(data.items, regularFont);
   const total = data.items.reduce((sum, item) => sum + Number(item.quantity) * Number(item.unitCost), 0);
   if (!Number.isSafeInteger(total)) throw new Error("The work-order total is too large.");
 
+  page.drawText("REQUESTED ITEMS", {
+    x: 143,
+    y: 418,
+    font: boldFont,
+    size: 9,
+    color: WORK_ORDER_INK,
+  });
   const linesOnFirstPage = 5;
-  drawWorkOrderLines(page, lines, 403, regularFont, linesOnFirstPage);
+  drawWorkOrderLines(page, lines, 401, regularFont, linesOnFirstPage);
   page.drawText(`Total = ${formatWorkOrderTotal(total)}`, {
     x: 143,
     y: 335,
     font: regularFont,
     size: 8,
-    color: INK,
+    color: WORK_ORDER_INK,
   });
 
   let remainingLines = lines.slice(linesOnFirstPage);
@@ -386,21 +405,21 @@ export async function fillWorkOrderPdf(templateBytes, data) {
       y: 748,
       font: boldFont,
       size: 14,
-      color: INK,
+      color: WORK_ORDER_INK,
     });
     continuationPage.drawText(`Date: ${dateText}`, {
       x: 56,
       y: 725,
       font: regularFont,
       size: 9,
-      color: INK,
+      color: WORK_ORDER_INK,
     });
     continuationPage.drawText(`Total = ${formatWorkOrderTotal(total)}`, {
       x: 56,
       y: 700,
       font: boldFont,
       size: 10,
-      color: INK,
+      color: WORK_ORDER_INK,
     });
     const linesOnPage = Math.min(remainingLines.length, 52);
     drawWorkOrderLines(continuationPage, remainingLines.slice(0, linesOnPage), 672, regularFont, linesOnPage);
