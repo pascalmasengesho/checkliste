@@ -20,7 +20,7 @@ The shared equipment history uses Supabase. It is unavailable until the project 
 
 1. Create a Supabase project at [supabase.com/dashboard](https://supabase.com/dashboard) and save its database password privately.
 2. In **Project Settings → API**, copy the **Project URL** and the **public anon/publishable key**. Never use or publish the `service_role` or secret key in this website.
-3. In **SQL Editor**, run the contents of [`supabase/schema.sql`](./supabase/schema.sql). Run it again when updating an existing project to apply schema changes. It creates an append-only service log, stamps each record with the authenticated staff account, and restricts access through row-level security.
+3. In **SQL Editor**, run the contents of [`supabase/schema.sql`](./supabase/schema.sql). Run it again when updating an existing project to apply schema changes. It stamps records with authenticated staff identity, requires admin approval for new records, and restricts access through row-level security. Existing records are preserved as approved.
 4. In **Authentication → Providers → Email**, enable email sign-in. In **Authentication → URL Configuration**, add the deployed GitHub Pages URL (and the local app URL if needed) to the allowed redirect URLs. Disable public sign-ups.
 5. In **Authentication → Users**, invite each staff member by email. In **SQL Editor**, add each invited address to the private staff allowlist, replacing the example email:
 
@@ -39,11 +39,11 @@ The shared equipment history uses Supabase. It is unavailable until the project 
    on conflict (email) do update set role = 'admin';
    ```
 
-   Checklist admins can add or remove staff allowlist entries in the app. The project owner must still send Supabase invitations; admins cannot promote other staff to admin. Service records remain immutable, including when a staff member's access is removed.
+   Checklist admins can add or remove staff allowlist entries, approve service records, and permanently delete records in the app. The project owner must still send Supabase invitations; admins cannot promote other staff to admin. New service and schedule entries remain pending and do not affect reminders until approved. Approval and deletion are enforced by database functions, not only by the UI.
 6. Put the Project URL and public anon/publishable key in `window.MAINTENANCE_SUPABASE_CONFIG` near the top of `index.html`, replacing the empty strings. The public key is designed for browser use; the database policies, not secrecy of this key, protect staff records.
 7. Build and deploy the site. Staff sign in with their invited email, then use **Equipment service & reminders** to record work or schedule the next service. Alerts appear on the checklist when an equipment item is overdue, due today, or due in the next 7 days.
 
-Each new service entry is immutable and records the signed-in email automatically. To change a schedule, add a newer record for the same equipment; that new record becomes its active reminder. An entry without a next-service date clears the previous reminder for that equipment.
+Each new service entry records the signed-in email automatically and remains pending until approved by an admin. Only approved entries affect reminders. To change a schedule, add a newer record for the same equipment and have an admin approve it; that then becomes its active reminder. An approved entry without a next-service date clears the previous reminder for that equipment.
 
 ## Build and test
 

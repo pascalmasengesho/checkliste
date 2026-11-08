@@ -129,10 +129,46 @@ create table if not exists public.maintenance_service_records (
   details text not null check (char_length(btrim(details)) between 1 and 2000),
   event_date date not null,
   next_service_date date check (next_service_date is null or next_service_date >= event_date),
+  approval_status text not null default 'pending' check (approval_status in ('pending', 'approved')),
+  approved_by uuid references auth.users (id) on delete set null,
+  approved_by_email text,
+  approved_at timestamptz,
   created_by uuid not null references auth.users (id) on delete restrict,
   created_by_email text not null,
   created_at timestamptz not null default now()
 );
+
+alter table public.maintenance_service_records
+  add column if not exists approval_status text;
+alter table public.maintenance_service_records
+  add column if not exists approved_by uuid references auth.users (id) on delete set null;
+alter table public.maintenance_service_records
+  add column if not exists approved_by_email text;
+alter table public.maintenance_service_records
+  add column if not exists approved_at timestamptz;
+
+update public.maintenance_service_records
+set approval_status = 'approved'
+where approval_status is null;
+
+alter table public.maintenance_service_records
+  alter column approval_status set default 'pending',
+  alter column approval_status set not null;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conrelid = 'public.maintenance_service_records'::regclass
+      and conname = 'maintenance_service_records_approval_status_check'
+  ) then
+    alter table public.maintenance_service_records
+      add constraint maintenance_service_records_approval_status_check
+      check (approval_status in ('pending', 'approved'));
+  end if;
+end;
+$$;
 
 create index if not exists maintenance_service_records_created_at_idx
   on public.maintenance_service_records (created_at desc);
@@ -165,6 +201,65 @@ create policy "Staff can add records for their own account"
     and (select public.is_maintenance_service_staff())
   );
 
+create or replace function public.approve_maintenance_service_record(p_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  updated_rows integer;
+begin
+  if not public.is_maintenance_service_admin() then
+    raise exception 'Only checklist admins can approve service records.'
+      using errcode = '42501';
+  end if;
+  if auth.uid() is null or coalesce(auth.jwt() ->> 'email', '') = '' then
+    raise exception 'An authenticated checklist admin is required.';
+  end if;
+
+  update public.maintenance_service_records
+  set approval_status = 'approved',
+      approved_by = auth.uid(),
+      approved_by_email = auth.jwt() ->> 'email',
+      approved_at = now()
+  where id = p_id
+    and approval_status = 'pending';
+  get diagnostics updated_rows = row_count;
+  if updated_rows = 0 then
+    raise exception 'This service record was not found or is no longer pending approval.';
+  end if;
+end;
+$$;
+
+create or replace function public.delete_maintenance_service_record(p_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  deleted_rows integer;
+begin
+  if not public.is_maintenance_service_admin() then
+    raise exception 'Only checklist admins can delete service records.'
+      using errcode = '42501';
+  end if;
+
+  delete from public.maintenance_service_records
+  where id = p_id;
+  get diagnostics deleted_rows = row_count;
+  if deleted_rows = 0 then
+    raise exception 'The service record was not found or was already deleted.';
+  end if;
+end;
+$$;
+
+revoke all on function public.approve_maintenance_service_record(uuid) from public, anon;
+revoke all on function public.delete_maintenance_service_record(uuid) from public, anon;
+grant execute on function public.approve_maintenance_service_record(uuid) to authenticated;
+grant execute on function public.delete_maintenance_service_record(uuid) to authenticated;
+
 create or replace function public.stamp_maintenance_service_record()
 returns trigger
 language plpgsql
@@ -181,6 +276,10 @@ begin
   new.created_by := auth.uid();
   new.created_by_email := auth.jwt() ->> 'email';
   new.created_at := now();
+  new.approval_status := 'pending';
+  new.approved_by := null;
+  new.approved_by_email := null;
+  new.approved_at := null;
   return new;
 end;
 $$;

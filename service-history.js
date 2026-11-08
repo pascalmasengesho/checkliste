@@ -13,7 +13,7 @@ const ACTION_LABELS = {
 
 export function getDueReminders(records, today, windowDays = REMINDER_WINDOW_DAYS) {
   const latestByEquipment = new Map();
-  for (const record of records) {
+  for (const record of records.filter((entry) => entry.approval_status === "approved")) {
     const equipmentKey = record.equipment.trim().toLowerCase();
     if (!latestByEquipment.has(equipmentKey)) latestByEquipment.set(equipmentKey, record);
   }
@@ -213,7 +213,7 @@ export function initializeServiceHistory() {
       recordForm.reset();
       eventDateInput.value = todayIso();
       actionInput.dispatchEvent(new Event("change"));
-      setMessage(recordMessage, "Service record saved. Its staff account and timestamp were recorded automatically.", true);
+      setMessage(recordMessage, "Service record submitted and is waiting for admin approval. Reminders update after approval.", true);
       try {
         const records = await loadHistory();
         renderHistory(records);
@@ -236,7 +236,7 @@ export function initializeServiceHistory() {
     for (let offset = 0; ; offset += PAGE_SIZE) {
       const { data, error } = await supabase
         .from(TABLE_NAME)
-        .select("id,equipment,action,details,event_date,next_service_date,created_by_email,created_at")
+        .select("id,equipment,action,details,event_date,next_service_date,created_by_email,created_at,approval_status,approved_by_email,approved_at")
         .order("created_at", { ascending: false })
         .range(offset, offset + PAGE_SIZE - 1);
       if (error) throw error;
@@ -330,13 +330,72 @@ export function initializeServiceHistory() {
         createTextElement("h4", "service-record-title", `${record.equipment} · ${ACTION_LABELS[record.action] || "Service record"}`),
         createTextElement("p", "service-record-details", record.details),
         createTextElement("p", "service-record-meta", `Date: ${formatDate(record.event_date)} · Recorded by: ${record.created_by_email} · Added: ${formatDate(record.created_at.slice(0, 10))}`),
+        createTextElement(
+          "p",
+          record.approval_status === "approved" ? "service-record-approved" : "service-record-pending",
+          record.approval_status === "approved"
+            ? `Approved${record.approved_by_email ? ` by ${record.approved_by_email}` : ""}${record.approved_at ? ` · ${formatDate(record.approved_at.slice(0, 10))}` : ""}`
+            : "Pending admin approval",
+        ),
       );
       if (record.next_service_date) {
         article.append(createTextElement("p", "service-record-due", `Next service due: ${formatDate(record.next_service_date)}`));
       }
+      if (!adminPanel.hidden) {
+        const actions = document.createElement("div");
+        actions.className = "service-record-actions";
+        if (record.approval_status === "pending") {
+          const approveButton = createTextElement("button", "button button-primary", "Approve");
+          approveButton.type = "button";
+          approveButton.addEventListener("click", () => void approveRecord(record, approveButton));
+          actions.append(approveButton);
+        }
+        const deleteButton = createTextElement("button", "button button-secondary service-record-delete", "Delete");
+        deleteButton.type = "button";
+        deleteButton.addEventListener("click", () => void deleteRecord(record, deleteButton));
+        actions.append(deleteButton);
+        article.append(actions);
+      }
       fragment.append(article);
     }
     historyList.replaceChildren(fragment);
+  }
+
+  async function approveRecord(record, button) {
+    button.disabled = true;
+    setMessage(adminMessage, `Approving the ${record.equipment} record…`);
+    try {
+      const { error } = await supabase.rpc("approve_maintenance_service_record", {
+        p_id: record.id,
+      });
+      if (error) throw error;
+      setMessage(adminMessage, `Approved the ${record.equipment} record.`, true);
+      await refreshHistory();
+    } catch (error) {
+      console.error("Could not approve the service record.", error);
+      setMessage(adminMessage, error instanceof Error ? error.message : "Could not approve the service record. Try again.");
+      button.disabled = false;
+    }
+  }
+
+  async function deleteRecord(record, button) {
+    const description = `${record.equipment} (${ACTION_LABELS[record.action] || "Service record"}, ${formatDate(record.event_date)})`;
+    if (!window.confirm(`Permanently delete ${description}? This cannot be undone.`)) return;
+
+    button.disabled = true;
+    setMessage(adminMessage, `Deleting the ${record.equipment} record…`);
+    try {
+      const { error } = await supabase.rpc("delete_maintenance_service_record", {
+        p_id: record.id,
+      });
+      if (error) throw error;
+      setMessage(adminMessage, `Deleted the ${record.equipment} record.`, true);
+      await refreshHistory();
+    } catch (error) {
+      console.error("Could not delete the service record.", error);
+      setMessage(adminMessage, error instanceof Error ? error.message : "Could not delete the service record. Try again.");
+      button.disabled = false;
+    }
   }
 
   function renderReminders(records) {

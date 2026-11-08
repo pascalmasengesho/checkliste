@@ -486,8 +486,14 @@ h2 { margin-bottom: 0; font-size: 20px; line-height: 1.3; font-weight: 700; }
 .service-history-record { padding: 13px; border: 1px solid #e8ede8; border-radius: 9px; background: #fcfdfc; }
 .service-record-title { margin: 0 0 6px; font-size: 13px; }
 .service-record-details { margin: 0 0 7px; color: #46534b; font-size: 12px; line-height: 1.55; overflow-wrap: anywhere; white-space: pre-wrap; }
-.service-record-meta, .service-record-due, .service-empty, .service-error { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.5; overflow-wrap: anywhere; }
+.service-record-meta, .service-record-due, .service-record-approved, .service-record-pending, .service-empty, .service-error { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.5; overflow-wrap: anywhere; }
 .service-record-due { margin-top: 4px; color: var(--green-dark); font-weight: 650; }
+.service-record-approved, .service-record-pending { margin-top: 4px; font-weight: 650; }
+.service-record-approved { color: var(--green-dark); }
+.service-record-pending { color: #8a5a00; }
+.service-record-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.service-record-actions .button { min-height: 32px; padding: 0 10px; font-size: 11px; }
+.service-record-delete { color: var(--red); }
 .service-error { color: var(--red); }
 .service-dialog [hidden], .service-access-card [hidden] { display: none !important; }
 .work-order-dialog h2 { margin-bottom: 7px; }
