@@ -49,3 +49,33 @@ test("ignores pending entries when calculating reminders and latest approved sch
     ["Generator"],
   );
 });
+
+test("silences the active reminder while a completion confirmation awaits approval", () => {
+  const records = [
+    { equipment: "Freezer", next_service_date: "2026-03-10", approval_status: "pending", reminder_action: "completed" },
+    { equipment: "Freezer", next_service_date: "2026-03-10", approval_status: "approved", reminder_action: null },
+  ];
+
+  assert.deepEqual(getDueReminders(records, "2026-03-10"), []);
+});
+
+test("silences the old reminder during postponement and activates the approved new date", () => {
+  const pendingPostponement = [
+    { equipment: "Generator", next_service_date: "2026-03-10", approval_status: "pending", reminder_action: "postponed" },
+    { equipment: "Generator", next_service_date: "2026-03-10", approval_status: "approved", reminder_action: null },
+  ];
+  assert.deepEqual(getDueReminders(pendingPostponement, "2026-03-10"), []);
+
+  const approvedPostponement = [
+    { equipment: "Generator", next_service_date: "2026-03-18", approval_status: "approved", reminder_action: "postponed" },
+    { equipment: "Generator", next_service_date: "2026-03-10", approval_status: "approved", reminder_action: null },
+  ];
+  assert.deepEqual(
+    getDueReminders(approvedPostponement, "2026-03-10").map((record) => record.next_service_date),
+    [],
+  );
+  assert.deepEqual(
+    getDueReminders(approvedPostponement, "2026-03-11").map((record) => record.next_service_date),
+    ["2026-03-18"],
+  );
+});

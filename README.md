@@ -43,7 +43,7 @@ The shared equipment history uses Supabase. It is unavailable until the project 
 6. Put the Project URL and public anon/publishable key in `window.MAINTENANCE_SUPABASE_CONFIG` near the top of `index.html`, replacing the empty strings. The public key is designed for browser use; the database policies, not secrecy of this key, protect staff records.
 7. Build and deploy the site. Staff sign in with their invited email, then use **Equipment service & reminders** to record work or schedule the next service. Alerts appear on the checklist when an equipment item is overdue, due today, or due in the next 7 days.
 
-Each new service entry records the signed-in email automatically and remains pending until approved by an admin. Only approved entries affect reminders. To change a schedule, add a newer record for the same equipment and have an admin approve it; that then becomes its active reminder. An approved entry without a next-service date clears the previous reminder for that equipment.
+Each new service entry records the signed-in email automatically and remains pending until approved by an admin. Only approved entries affect reminders. From an active reminder, staff can confirm that service is complete or choose a later date to postpone it. Either action immediately silences that equipment's reminder by adding a pending service record; after admin approval, completion clears the reminder or the postponed date becomes active. Other pending entries do not change reminders. An approved entry without a next-service date clears the previous reminder for that equipment.
 
 ## Build and test
 

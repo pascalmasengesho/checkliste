@@ -130,6 +130,7 @@ create table if not exists public.maintenance_service_records (
   event_date date not null,
   next_service_date date check (next_service_date is null or next_service_date >= event_date),
   approval_status text not null default 'pending' check (approval_status in ('pending', 'approved')),
+  reminder_action text check (reminder_action in ('completed', 'postponed')),
   approved_by uuid references auth.users (id) on delete set null,
   approved_by_email text,
   approved_at timestamptz,
@@ -140,6 +141,8 @@ create table if not exists public.maintenance_service_records (
 
 alter table public.maintenance_service_records
   add column if not exists approval_status text;
+alter table public.maintenance_service_records
+  add column if not exists reminder_action text;
 alter table public.maintenance_service_records
   add column if not exists approved_by uuid references auth.users (id) on delete set null;
 alter table public.maintenance_service_records
@@ -166,6 +169,21 @@ begin
     alter table public.maintenance_service_records
       add constraint maintenance_service_records_approval_status_check
       check (approval_status in ('pending', 'approved'));
+  end if;
+end;
+$$;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conrelid = 'public.maintenance_service_records'::regclass
+      and conname = 'maintenance_service_records_reminder_action_check'
+  ) then
+    alter table public.maintenance_service_records
+      add constraint maintenance_service_records_reminder_action_check
+      check (reminder_action in ('completed', 'postponed'));
   end if;
 end;
 $$;
@@ -280,6 +298,14 @@ begin
   new.approved_by := null;
   new.approved_by_email := null;
   new.approved_at := null;
+  if new.reminder_action = 'completed'
+      and (new.action <> 'serviced' or new.next_service_date is not null) then
+    raise exception 'A completed reminder action must be a serviced record without a next service date.';
+  end if;
+  if new.reminder_action = 'postponed'
+      and (new.action <> 'scheduled' or new.next_service_date is null) then
+    raise exception 'A postponed reminder action must include the new scheduled service date.';
+  end if;
   return new;
 end;
 $$;

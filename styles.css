@@ -144,8 +144,14 @@ button { -webkit-tap-highlight-color: transparent; }
 .service-access-copy { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
 .service-reminder-summary { padding: 11px 13px; border: 1px solid #dce9df; border-radius: 8px; background: #f4faf5; color: #355b42; font-size: 12px; line-height: 1.55; }
 .service-reminder-summary.has-overdue { border-color: #efcfca; background: var(--red-pale); color: #7d332e; }
+.service-reminder-feedback { margin: 0 0 5px; font-weight: 650; }
 .service-reminder-summary ul { margin: 6px 0 0; padding-left: 19px; }
 .service-reminder-summary li + li { margin-top: 3px; }
+.service-reminder-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin: 6px 0 8px; }
+.service-reminder-actions .button { min-height: 30px; padding: 0 9px; font-size: 10px; }
+.service-reminder-postpone { display: flex; flex-wrap: wrap; gap: 7px; }
+.service-reminder-postpone[hidden] { display: none; }
+.service-reminder-postpone input { min-height: 30px; padding: 0 7px; border: 1px solid #cbd6cc; border-radius: 6px; background: white; color: var(--ink); font: inherit; font-size: 11px; }
 .reminder-overdue { color: var(--red); }
 .reminder-upcoming { color: #7a590e; }
 

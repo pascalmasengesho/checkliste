@@ -13,14 +13,18 @@ const ACTION_LABELS = {
 
 export function getDueReminders(records, today, windowDays = REMINDER_WINDOW_DAYS) {
   const latestByEquipment = new Map();
-  for (const record of records.filter((entry) => entry.approval_status === "approved")) {
+  for (const record of records) {
     const equipmentKey = record.equipment.trim().toLowerCase();
-    if (!latestByEquipment.has(equipmentKey)) latestByEquipment.set(equipmentKey, record);
+    if (latestByEquipment.has(equipmentKey)) continue;
+    if (record.approval_status === "approved" || record.reminder_action) {
+      latestByEquipment.set(equipmentKey, record);
+    }
   }
 
   const lastReminderDate = addDays(today, windowDays);
   return [...latestByEquipment.values()]
-    .filter((record) => record.next_service_date && record.next_service_date <= lastReminderDate)
+    .filter((record) => record.approval_status === "approved" &&
+      record.next_service_date && record.next_service_date <= lastReminderDate)
     .sort((left, right) => left.next_service_date.localeCompare(right.next_service_date));
 }
 
@@ -79,6 +83,8 @@ export function initializeServiceHistory() {
   const recordMessage = document.getElementById("service-record-message");
   const historyList = document.getElementById("service-history-list");
   const reminderSummary = document.getElementById("service-reminder-summary");
+  let reminderFeedback = "";
+  let reminderFeedbackIsError = false;
   let supabase;
 
   openButton.addEventListener("click", () => {
@@ -230,13 +236,50 @@ export function initializeServiceHistory() {
     }
   });
 
+  async function submitReminderAction(record, reminderAction, nextServiceDate = null) {
+    const eventDate = todayIso();
+    const isPostponed = reminderAction === "postponed";
+    const details = isPostponed
+      ? `Scheduled service postponed from ${record.next_service_date} to ${nextServiceDate}.`
+      : `Scheduled service for ${record.next_service_date} confirmed complete.`;
+    try {
+      const { error } = await supabase.from(TABLE_NAME).insert({
+        equipment: record.equipment,
+        action: isPostponed ? "scheduled" : "serviced",
+        details,
+        event_date: eventDate,
+        next_service_date: nextServiceDate,
+        reminder_action: reminderAction,
+      });
+      if (error) throw error;
+
+      setMessage(recordMessage, isPostponed
+        ? `Postponement submitted for admin approval. The ${record.equipment} reminder is silenced for now.`
+        : `Completion submitted for admin approval. The ${record.equipment} reminder is silenced for now.`, true);
+      reminderFeedback = isPostponed
+        ? `${record.equipment} reminder silenced while the postponed date awaits admin approval.`
+        : `${record.equipment} reminder silenced while completion awaits admin approval.`;
+      reminderFeedbackIsError = false;
+      await refreshHistory();
+      return true;
+    } catch (error) {
+      console.error(`Could not submit the ${reminderAction} reminder action.`, error);
+      reminderFeedback = error instanceof Error ? error.message : "Could not update this reminder. Try again.";
+      reminderFeedbackIsError = true;
+      const feedback = createTextElement("p", "service-reminder-feedback service-error", reminderFeedback);
+      feedback.setAttribute("role", "status");
+      reminderSummary.prepend(feedback);
+      return false;
+    }
+  }
+
   let sessionVersion = 0;
   async function loadHistory() {
     let records = [];
     for (let offset = 0; ; offset += PAGE_SIZE) {
       const { data, error } = await supabase
         .from(TABLE_NAME)
-        .select("id,equipment,action,details,event_date,next_service_date,created_by_email,created_at,approval_status,approved_by_email,approved_at")
+        .select("id,equipment,action,details,event_date,next_service_date,created_by_email,created_at,approval_status,approved_by_email,approved_at,reminder_action")
         .order("created_at", { ascending: false })
         .range(offset, offset + PAGE_SIZE - 1);
       if (error) throw error;
@@ -402,8 +445,17 @@ export function initializeServiceHistory() {
     const reminders = getDueReminders(records, todayIso());
     reminderSummary.replaceChildren();
     reminderSummary.hidden = false;
+    if (reminderFeedback) {
+      const feedback = createTextElement(
+        "p",
+        reminderFeedbackIsError ? "service-reminder-feedback service-error" : "service-reminder-feedback",
+        reminderFeedback,
+      );
+      feedback.setAttribute("role", "status");
+      reminderSummary.append(feedback);
+    }
     if (!reminders.length) {
-      reminderSummary.textContent = "No equipment is due for service within the next 7 days.";
+      reminderSummary.append(document.createTextNode("No equipment is due for service within the next 7 days."));
       reminderSummary.classList.remove("has-overdue");
       return;
     }
@@ -421,6 +473,43 @@ export function initializeServiceHistory() {
         createTextElement("strong", overdue ? "reminder-overdue" : "reminder-upcoming", record.equipment),
         document.createTextNode(` — ${overdue ? "Overdue" : record.next_service_date === todayIso() ? "Due today" : "Due"} ${formatDate(record.next_service_date)}`),
       );
+      const actions = document.createElement("div");
+      actions.className = "service-reminder-actions";
+      const doneButton = createTextElement("button", "button button-primary", "Confirm done");
+      doneButton.type = "button";
+      doneButton.addEventListener("click", async () => {
+        doneButton.disabled = true;
+        if (!await submitReminderAction(record, "completed")) doneButton.disabled = false;
+      });
+      const postponeButton = createTextElement("button", "button button-secondary", "Postpone");
+      postponeButton.type = "button";
+      const postponeForm = document.createElement("form");
+      postponeForm.className = "service-reminder-postpone";
+      postponeForm.hidden = true;
+      const dateInput = document.createElement("input");
+      dateInput.type = "date";
+      dateInput.min = record.next_service_date;
+      dateInput.value = addDays(record.next_service_date, 7);
+      dateInput.required = true;
+      dateInput.setAttribute("aria-label", `New service date for ${record.equipment}`);
+      const submitButton = createTextElement("button", "button button-primary", "Submit date");
+      submitButton.type = "submit";
+      postponeForm.append(dateInput, submitButton);
+      postponeButton.addEventListener("click", () => {
+        postponeForm.hidden = !postponeForm.hidden;
+        if (!postponeForm.hidden) dateInput.focus();
+      });
+      postponeForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        if (!postponeForm.reportValidity()) return;
+        submitButton.disabled = true;
+        postponeButton.disabled = true;
+        await submitReminderAction(record, "postponed", dateInput.value);
+        submitButton.disabled = false;
+        postponeButton.disabled = false;
+      });
+      actions.append(doneButton, postponeButton, postponeForm);
+      item.append(actions);
       list.append(item);
     }
     reminderSummary.append(heading, list);
