@@ -127,14 +127,8 @@ export async function fillChecklistPdf(templateBytes, data) {
     });
     if (answer.comment?.trim()) {
       const commentLines = wrappedLines(answer.comment.trim(), regularFont, 6, 195, Infinity);
-      const displayedLines = commentLines.slice(0, 3);
-      if (commentLines.length > 3) {
-        let lastLine = displayedLines[2].replace(/[ .]+$/, "");
-        while (lastLine && regularFont.widthOfTextAtSize(`${lastLine}...`, 6) > 195) {
-          lastLine = lastLine.slice(0, -1);
-        }
-        displayedLines[2] = `${lastLine}...`;
-      }
+      const needsContinuation = commentLines.length > 3;
+      const displayedLines = needsContinuation ? ["See continuation page"] : commentLines;
       displayedLines.forEach((line, lineIndex) => {
         page.drawText(line, {
           x: 355,
@@ -144,11 +138,11 @@ export async function fillChecklistPdf(templateBytes, data) {
           color: INK,
         });
       });
-      if (commentLines.length > 3) {
+      if (needsContinuation) {
         commentContinuations.push({
           heading: `Check ${index + 1} comment`,
           continuationHeading: `Check ${index + 1} comment (continued)`,
-          lines: commentLines.slice(3),
+          lines: commentLines,
         });
       }
     }
