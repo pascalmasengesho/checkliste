@@ -59,17 +59,18 @@ test("includes an optional comment when a check is marked Yes", async () => {
   assert.equal(filled.getPageCount(), 2);
 });
 
-test("keeps long comments complete on additional PDF pages", async () => {
+test("keeps long comments out of additional PDF pages", async () => {
   const data = createData();
   const marker = "FINALCOMMENTMARKER";
   data.answers[0].comment = `${"maintenance ".repeat(1500)}${marker}`;
   const pdf = await fillChecklistPdf(template, data);
   const filled = await PDFDocument.load(pdf);
-  assert.ok(filled.getPageCount() > 3);
-  const continuationContent = filled.getPages().slice(2)
-    .map((page) => getPageContent(page, filled))
-    .join("\n");
-  assert.ok(continuationContent.includes(Buffer.from(marker).toString("hex").toUpperCase()));
+  assert.equal(filled.getPageCount(), 2);
+  const checklistContent = getPageContent(filled.getPage(0), filled);
+  assert.ok(checklistContent.includes(Buffer.from("...").toString("hex").toUpperCase()));
+  assert.ok(!checklistContent.includes(Buffer.from(marker).toString("hex").toUpperCase()));
+  const otherPageContent = getPageContent(filled.getPage(1), filled);
+  assert.ok(!otherPageContent.includes(Buffer.from(marker).toString("hex").toUpperCase()));
 });
 
 test("keeps long notes and follow-up text complete on additional PDF pages", async () => {
@@ -82,6 +83,7 @@ test("keeps long notes and follow-up text complete on additional PDF pages", asy
   const continuationContent = filled.getPages().slice(2)
     .map((page) => getPageContent(page, filled))
     .join("\n");
+  assert.ok(continuationContent.includes(Buffer.from("Checklist notes").toString("hex").toUpperCase()));
   assert.ok(continuationContent.includes(Buffer.from("Notes and follow-up").toString("hex").toUpperCase()));
   assert.ok(continuationContent.includes(Buffer.from(marker).toString("hex").toUpperCase()));
 });

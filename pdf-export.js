@@ -110,7 +110,7 @@ export async function fillChecklistPdf(templateBytes, data) {
   ]);
   const pageOne = pages[0];
   const pageTwo = pages[1];
-  const commentContinuations = [];
+  const noteContinuations = [];
   pageOne.drawText(dateText, { x: 457, y: 717, font: boldFont, size: 9, color: INK });
 
   for (let index = 0; index < ROWS.length; index += 1) {
@@ -144,13 +144,6 @@ export async function fillChecklistPdf(templateBytes, data) {
           color: INK,
         });
       });
-      if (commentLines.length > 3) {
-        commentContinuations.push({
-          heading: `Check ${index + 1} comment`,
-          continuationHeading: `Check ${index + 1} comment (continued)`,
-          lines: commentLines.slice(3),
-        });
-      }
     }
   }
 
@@ -203,7 +196,7 @@ export async function fillChecklistPdf(templateBytes, data) {
         lastLine = lastLine.slice(0, -1);
       }
       displayedLines[2] = `${lastLine}...`;
-      commentContinuations.push({
+      noteContinuations.push({
         heading: "Notes and follow-up",
         continuationHeading: "Notes and follow-up (continued)",
         lines: noteLines.slice(3),
@@ -224,7 +217,7 @@ export async function fillChecklistPdf(templateBytes, data) {
   let continuationY;
   const startContinuationPage = () => {
     continuationPage = pdf.addPage([612, 792]);
-    continuationPage.drawText("Checklist comments (continued)", {
+    continuationPage.drawText("Checklist notes (continued)", {
       x: 72,
       y: 750,
       font: boldFont,
@@ -234,7 +227,7 @@ export async function fillChecklistPdf(templateBytes, data) {
     continuationY = 720;
   };
 
-  for (const comment of commentContinuations) {
+  for (const comment of noteContinuations) {
     if (!continuationPage || continuationY < 70) startContinuationPage();
     continuationPage.drawText(`${comment.heading}:`, {
       x: 72,
