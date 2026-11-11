@@ -72,7 +72,7 @@ const workOrderForm = document.getElementById("work-order-form");
 const workOrderItemsRoot = document.getElementById("work-order-items");
 const workOrderMessage = document.getElementById("work-order-message");
 
-signatureContext.strokeStyle = "#285e49";
+signatureContext.strokeStyle = "#000000";
 signatureContext.lineWidth = 4.5;
 signatureContext.lineCap = "round";
 signatureContext.lineJoin = "round";

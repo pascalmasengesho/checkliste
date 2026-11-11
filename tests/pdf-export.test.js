@@ -41,6 +41,9 @@ test("fills the original two-page checklist with its 24 checks", async () => {
   assert.equal(filled.getPage(0).getSize().width, original.getPage(0).getSize().width);
   assert.equal(filled.getPage(1).getSize().height, original.getPage(1).getSize().height);
   assert.ok(filled.context.enumerateIndirectObjects().length > original.context.enumerateIndirectObjects().length);
+  const checklistContent = getPageContent(filled.getPage(0), filled);
+  assert.match(checklistContent, /0 0 0 rg/);
+  assert.doesNotMatch(checklistContent, /0\.12941 0\.29412 0\.22353 rg/);
 });
 
 test("allows comments to be omitted for any check", async () => {

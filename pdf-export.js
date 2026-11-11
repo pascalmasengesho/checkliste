@@ -12,7 +12,7 @@ const ROWS = [
   [2, 609.58, 567.34],
 ];
 
-const INK = rgb(33 / 255, 75 / 255, 57 / 255);
+const INK = rgb(0, 0, 0);
 const WORK_ORDER_INK = rgb(0, 0, 0);
 const DUTY_NAME = { x: 177, y: 565.5, maxWidth: 98 };
 const SIGNATURE_BOX = { x: 458, y: 553.5, width: 96, height: 24 };
