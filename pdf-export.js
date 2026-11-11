@@ -145,7 +145,11 @@ export async function fillChecklistPdf(templateBytes, data) {
         });
       });
       if (commentLines.length > 3) {
-        commentContinuations.push({ number: index + 1, lines: commentLines.slice(3) });
+        commentContinuations.push({
+          heading: `Check ${index + 1} comment`,
+          continuationHeading: `Check ${index + 1} comment (continued)`,
+          lines: commentLines.slice(3),
+        });
       }
     }
   }
@@ -191,15 +195,28 @@ export async function fillChecklistPdf(templateBytes, data) {
   }
 
   if (data.notes?.trim()) {
-    drawWrappedText(pageTwo, data.notes.trim(), {
-      x: 79,
-      y: 526,
-      font: regularFont,
-      size: 8,
-      color: INK,
-      maxWidth: 474,
-      maxLines: 3,
-      lineHeight: 12,
+    const noteLines = wrappedLines(data.notes.trim(), regularFont, 8, 474, Infinity);
+    const displayedLines = noteLines.slice(0, 3);
+    if (noteLines.length > 3) {
+      let lastLine = displayedLines[2].replace(/[ .]+$/, "");
+      while (lastLine && regularFont.widthOfTextAtSize(`${lastLine}...`, 8) > 474) {
+        lastLine = lastLine.slice(0, -1);
+      }
+      displayedLines[2] = `${lastLine}...`;
+      commentContinuations.push({
+        heading: "Notes and follow-up",
+        continuationHeading: "Notes and follow-up (continued)",
+        lines: noteLines.slice(3),
+      });
+    }
+    displayedLines.forEach((line, index) => {
+      pageTwo.drawText(line, {
+        x: 79,
+        y: 526 - index * 12,
+        font: regularFont,
+        size: 8,
+        color: INK,
+      });
     });
   }
 
@@ -219,7 +236,7 @@ export async function fillChecklistPdf(templateBytes, data) {
 
   for (const comment of commentContinuations) {
     if (!continuationPage || continuationY < 70) startContinuationPage();
-    continuationPage.drawText(`Check ${comment.number} comment:`, {
+    continuationPage.drawText(`${comment.heading}:`, {
       x: 72,
       y: continuationY,
       font: boldFont,
@@ -230,7 +247,7 @@ export async function fillChecklistPdf(templateBytes, data) {
     for (const line of comment.lines) {
       if (continuationY < 55) {
         startContinuationPage();
-        continuationPage.drawText(`Check ${comment.number} comment (continued):`, {
+        continuationPage.drawText(`${comment.continuationHeading}:`, {
           x: 72,
           y: continuationY,
           font: boldFont,
