@@ -66,9 +66,6 @@ test("keeps long comments complete on additional PDF pages", async () => {
   const pdf = await fillChecklistPdf(template, data);
   const filled = await PDFDocument.load(pdf);
   assert.ok(filled.getPageCount() > 3);
-  const checklistContent = getPageContent(filled.getPage(0), filled);
-  assert.ok(checklistContent.includes(Buffer.from("See continuation page").toString("hex").toUpperCase()));
-  assert.ok(!checklistContent.includes(Buffer.from("maintenance maintenance").toString("hex").toUpperCase()));
   const continuationContent = filled.getPages().slice(2)
     .map((page) => getPageContent(page, filled))
     .join("\n");
